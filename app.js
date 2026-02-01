@@ -36,6 +36,12 @@ username = name;
 
 console.log("Username:", username);
 
+/* ===== Функция автоскролла ===== */
+function scrollToBottom() {
+// Скролл с учётом футера и небольшой подстраховки
+chat.scrollTop = chat.scrollHeight - chat.clientHeight + 20;
+}
+
 /* ===== Отправка сообщений ===== */
 async function sendMessage() {
 const text = input.value.trim();
@@ -61,7 +67,7 @@ sendMessage();
 }
 });
 
-/* ===== Получение сообщений (с анимацией) ===== */
+/* ===== Получение сообщений (с анимацией и автоскроллом) ===== */
 db.collection("messages")
 .orderBy("createdAt", "asc")
 .onSnapshot(snapshot => {
@@ -85,7 +91,8 @@ chat.appendChild(div);
 // Мини-анимация появления
 setTimeout(() => div.classList.add("show"), 10);
 
-chat.scrollTop = chat.scrollHeight;
+// Автоскролл после добавления сообщения
+scrollToBottom();
 }
 });
 });
