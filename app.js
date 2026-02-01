@@ -1,15 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-const loader = document.getElementById("loader");
-const app = document.getElementById("app");
+/* Плавное появление логотипа */
+const logo = document.getElementById("logo");
 
-/* Плавная загрузка */
 setTimeout(()=>{
-loader.classList.add("hide");
-app.classList.add("show");
-document.body.style.overflow="auto";
-},2000);
+logo.classList.add("show");
+},300);
 
+/* Firebase */
 const db = firebase.firestore();
 
 const input = document.getElementById("messageInput");
