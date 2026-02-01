@@ -1,55 +1,57 @@
-/* ===== Отправка сообщения ===== */
+document.addEventListener("DOMContentLoaded", function () {
 
-function sendMessage() {
+const db = firebase.firestore();
+
 const input = document.getElementById("messageInput");
 const chat = document.getElementById("chat");
+const sendBtn = document.getElementById("sendBtn");
 
-if (!input || !chat) return;
-
+/* ===== Отправка ===== */
+async function sendMessage() {
 const text = input.value.trim();
+if (!text) return;
 
-if (text === "") return;
+try {
+await db.collection("messages").add({
+text: text,
+time: firebase.firestore.FieldValue.serverTimestamp()
+});
 
-/* Создаём сообщение */
-const message = document.createElement("div");
-message.className = "message";
-message.textContent = text;
-
-/* Добавляем в чат */
-chat.appendChild(message);
-
-/* Очистка поля */
 input.value = "";
 
-/* Скролл вниз */
-chat.scrollTop = chat.scrollHeight;
+} catch (err) {
+console.error("Ошибка отправки:", err);
+}
 }
 
+sendBtn.addEventListener("click", sendMessage);
 
-/* ===== Отправка по Enter ===== */
-
-document.addEventListener("DOMContentLoaded", () => {
-const input = document.getElementById("messageInput");
-
-if (input) {
-input.addEventListener("keydown", function(event) {
-if (event.key === "Enter") {
-event.preventDefault();
+input.addEventListener("keydown", function(e){
+if(e.key === "Enter"){
+e.preventDefault();
 sendMessage();
 }
 });
-}
+
+/* ===== Получение сообщений ===== */
+db.collection("messages")
+.orderBy("time")
+.onSnapshot(snapshot => {
+
+chat.innerHTML = "";
+
+snapshot.forEach(doc => {
+const data = doc.data();
+if (!data.text) return;
+
+const div = document.createElement("div");
+div.className = "message";
+div.textContent = data.text;
+
+chat.appendChild(div);
 });
 
-
-/* ===== Автофокус на поле ввода ===== */
-
-document.addEventListener("DOMContentLoaded", () => {
-const input = document.getElementById("messageInput");
-if (input) input.focus();
+chat.scrollTop = chat.scrollHeight;
 });
 
-
-/* ===== Тест подключения JS ===== */
-/* Если хочешь проверить — открой консоль */
-console.log("app.js подключён");
+});
