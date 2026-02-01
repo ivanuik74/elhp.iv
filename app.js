@@ -1,4 +1,14 @@
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
+
+const loader = document.getElementById("loader");
+const app = document.getElementById("app");
+
+/* Плавная загрузка */
+setTimeout(()=>{
+loader.classList.add("hide");
+app.classList.add("show");
+document.body.style.overflow="auto";
+},2000);
 
 const db = firebase.firestore();
 
@@ -7,27 +17,27 @@ const chat = document.getElementById("chat");
 const sendBtn = document.getElementById("sendBtn");
 
 /* ===== Отправка ===== */
-async function sendMessage() {
+async function sendMessage(){
 const text = input.value.trim();
-if (!text) return;
+if(!text) return;
 
-try {
+try{
 await db.collection("messages").add({
-text: text,
-time: firebase.firestore.FieldValue.serverTimestamp()
+text:text,
+createdAt:firebase.firestore.FieldValue.serverTimestamp()
 });
 
-input.value = "";
+input.value="";
 
-} catch (err) {
-console.error("Ошибка отправки:", err);
+}catch(err){
+console.error("Ошибка отправки:",err);
 }
 }
 
-sendBtn.addEventListener("click", sendMessage);
+sendBtn.addEventListener("click",sendMessage);
 
-input.addEventListener("keydown", function(e){
-if(e.key === "Enter"){
+input.addEventListener("keydown",e=>{
+if(e.key==="Enter"){
 e.preventDefault();
 sendMessage();
 }
@@ -35,23 +45,23 @@ sendMessage();
 
 /* ===== Получение сообщений ===== */
 db.collection("messages")
-.orderBy("time")
-.onSnapshot(snapshot => {
+.orderBy("createdAt","asc")
+.onSnapshot(snapshot=>{
 
-chat.innerHTML = "";
+chat.innerHTML="";
 
-snapshot.forEach(doc => {
+snapshot.forEach(doc=>{
 const data = doc.data();
-if (!data.text) return;
+if(!data.text) return;
 
-const div = document.createElement("div");
-div.className = "message";
-div.textContent = data.text;
+const div=document.createElement("div");
+div.className="message";
+div.textContent=data.text;
 
 chat.appendChild(div);
 });
 
-chat.scrollTop = chat.scrollHeight;
+chat.scrollTop=chat.scrollHeight;
 });
 
 });
