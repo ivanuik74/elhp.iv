@@ -55,7 +55,7 @@ margin-left: 5px;
 /* ===== Chat ===== */
 .chat {
 display: flex;
-flex-direction: column;
+flex-direction: column; /* важно для правильного отображения сообщений */
 height: calc(100vh - 140px);
 overflow-y: auto;
 padding: 15px;
@@ -67,7 +67,7 @@ border-radius: 10px;
 margin-bottom: 10px;
 max-width: 70%;
 word-wrap: break-word;
-opacity: 0; /* для анимации */
+opacity: 0; /* для анимации появления */
 transform: translateY(10px);
 transition: all 0.3s ease;
 }
