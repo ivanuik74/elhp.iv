@@ -7,7 +7,6 @@ storageBucket: "elhp-iv.firebasestorage.app",
 messagingSenderId: "457553204800",
 appId: "1:457553204800:web:a9ae88735115a76c66b1a5"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
@@ -18,7 +17,6 @@ const messagesDiv = document.getElementById("messages");
 document.getElementById("logo").addEventListener("animationend", ()=>{
 let storedNick = localStorage.getItem("nickname");
 if(storedNick){
-// Получаем цвет ника из Firestore
 db.collection("users").doc(storedNick).get().then(doc=>{
 if(doc.exists){
 currentUser = { nickname: storedNick, color: doc.data().color };
@@ -32,7 +30,7 @@ showLogin();
 }
 });
 
-// ==== Функции отображения ====
+// ==== Отображение ====
 function showLogin(){
 document.getElementById("loginDiv").style.display="flex";
 setTimeout(()=>{ document.getElementById("loginDiv").style.opacity=1; },50);
@@ -52,13 +50,12 @@ function isValidNick(nick){ return /^[A-Za-z0-9_]{3,20}$/.test(nick); }
 // ==== Генерация уникального цвета ====
 function getRandomColor(existingColors){
 let color;
-do {
-color = `hsl(${Math.floor(Math.random()*360)}, 70%, 60%)`;
-} while(existingColors.has(color));
+do { color = `hsl(${Math.floor(Math.random()*360)},70%,60%)`; }
+while(existingColors.has(color));
 return color;
 }
 
-// ==== Регистрация с уникальным цветом ====
+// ==== Регистрация ====
 document.getElementById("loginBtn").addEventListener("click", async ()=>{
 let nick = document.getElementById("nickname").value.trim();
 if(!isValidNick(nick)) return alert("Ник 3-20 символов, A-Z, a-z, цифры, _");
@@ -68,17 +65,14 @@ const userRef = db.collection("users").doc(nick);
 const doc = await userRef.get();
 if(doc.exists) return alert("Такой ник уже занят!");
 
-// Получаем уже использованные цвета
 const usersSnapshot = await db.collection("users").get();
 let existingColors = new Set();
 usersSnapshot.forEach(d=>{
 if(d.data().color) existingColors.add(d.data().color);
 });
 
-// Генерируем уникальный цвет
 const color = getRandomColor(existingColors);
 
-// Сохраняем ник и цвет
 await userRef.set({
 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
 color: color
@@ -106,7 +100,7 @@ messagesDiv.scrollTop = messagesDiv.scrollHeight;
 });
 }
 
-// ==== Добавляем сообщение ====
+// ==== Добавление сообщений ====
 function appendMessage(msg){
 const div = document.createElement("div");
 div.classList.add("message");
@@ -116,7 +110,7 @@ div.innerHTML = `<span class="id" style="color:${nickColor}">${msg.sender}:</spa
 messagesDiv.appendChild(div);
 }
 
-// ==== Отправка сообщения ====
+// ==== Отправка ====
 document.getElementById("sendBtn").addEventListener("click", sendMessage);
 document.getElementById("textInput").addEventListener("keypress", function(e){
 if(e.key==="Enter"){ e.preventDefault(); sendMessage(); }
@@ -125,7 +119,7 @@ if(e.key==="Enter"){ e.preventDefault(); sendMessage(); }
 function sendMessage(){
 const text = document.getElementById("textInput").value.trim();
 if(!text) return;
-if(!currentUser) return alert("Введите ник");
+if(!currentUser || !currentUser.nickname) { alert("Введите ник!"); return; }
 
 db.collection("messages").add({
 sender: currentUser.nickname,
@@ -135,7 +129,7 @@ timestamp: firebase.firestore.FieldValue.serverTimestamp()
 }).then(()=>{
 document.getElementById("textInput").value = "";
 }).catch(err=>{
-console.error(err);
-alert("Ошибка при отправке");
+console.error("Ошибка при отправке:", err);
+alert("Ошибка при отправке сообщения.");
 });
 }
