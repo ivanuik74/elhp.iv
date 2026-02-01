@@ -6,13 +6,13 @@
 <title>elhp.iv — Публичная лента</title>
 <style>
 body {margin:0; font-family:'Segoe UI',sans-serif; background:#111; color:#fff; display:flex; flex-direction:column; height:100vh;}
+/* Светящийся логотип и лента */
+.glow {text-shadow: 0 0 5px #0ff, 0 0 10px #0ff, 0 0 15px #0ff;}
 
-/* Логотип */
-#logo {
-  display:flex; align-items:center; justify-content:center; padding:10px; background:#222; border-bottom:1px solid #333;
-}
-#logo img { height:40px; margin-right:10px; }
-#logo span { font-size:1.2em; font-weight:bold; }
+/* Название сайта */
+#logo {display:flex; align-items:center; justify-content:center; padding:10px; background:#222; border-bottom:1px solid #333;}
+#logo span { font-size:1.5em; font-weight:bold; }
+#footer {position:absolute; right:10px; top:50%; transform:translateY(-50%); writing-mode: vertical-rl; text-align:center; font-size:0.9em; color:#0ff;}
 
 /* Вход */
 #loginDiv {display:flex;flex-direction:column;justify-content:center;align-items:center;flex:1;}
@@ -34,43 +34,37 @@ button:hover{background:#555;}
 #textInput{flex:1;padding:10px;border:none;border-radius:6px;background:#333;color:#fff;margin-right:5px;}
 #sendBtn{padding:10px 20px;border:none;border-radius:6px;background:#444;cursor:pointer;}
 
-/* Подпись авторов */
-#footer{padding:5px;text-align:center;font-size:0.8em;color:#888;background:#111;border-top:1px solid #222;}
-
 @media(max-width:600px){
-  #messages{padding:5px;}
-  #textInput{font-size:16px;}
-  #sendBtn{font-size:16px;}
+#messages{padding:5px;}
+#textInput{font-size:16px;}
+#sendBtn{font-size:16px;}
 }
 </style>
 </head>
 <body>
 
 <!-- Логотип -->
-<div id="logo">
-  <img src="https://via.placeholder.com/40" alt="elhp.iv">
-  <span>elhp.iv</span>
-</div>
+<div id="logo"><span class="glow">elhp.iv</span></div>
 
 <!-- Вход -->
 <div id="loginDiv">
-  <h2>Выбери ник (A-Z, a-z, цифры, _)</h2>
-  <input type="text" id="nickname" placeholder="Ник">
-  <button id="loginBtn">Войти</button>
+<h2>Выбери ник (A-Z, a-z, цифры, _)</h2>
+<input type="text" id="nickname" placeholder="Ник">
+<button id="loginBtn">Войти</button>
 </div>
 
 <!-- Чат -->
 <div id="chatDiv">
-  <div id="chatTitle">#Лента</div>
-  <div id="messages"></div>
-  <div id="inputArea">
-    <input type="text" id="textInput" placeholder="Напишите сообщение...">
-    <button id="sendBtn">Отправить</button>
-  </div>
+<div id="chatTitle"><span class="glow">#Лента</span></div>
+<div id="messages"></div>
+<div id="inputArea">
+<input type="text" id="textInput" placeholder="Напишите сообщение...">
+<button id="sendBtn">Отправить</button>
+</div>
 </div>
 
-<!-- Подпись авторов -->
-<div id="footer">Сделано ivanuik74 и karweqks</div>
+<!-- Подпись авторов сбоку -->
+<div id="footer">Сделано<br>ivanuik74<br>и karweqks</div>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -79,12 +73,12 @@ button:hover{background:#555;}
 <script>
 // ==== Firebase config ====
 const firebaseConfig = {
-  apiKey: "AIzaSyBnI40Y9ti3bnsgPAYg4G9zaM1J8qkk1z8",
-  authDomain: "elhp-iv.firebaseapp.com",
-  projectId: "elhp-iv",
-  storageBucket: "elhp-iv.firebasestorage.app",
-  messagingSenderId: "457553204800",
-  appId: "1:457553204800:web:a9ae88735115a76c66b1a5"
+apiKey: "AIzaSyBnI40Y9ti3bnsgPAYg4G9zaM1J8qkk1z8",
+authDomain: "elhp-iv.firebaseapp.com",
+projectId: "elhp-iv",
+storageBucket: "elhp-iv.firebasestorage.app",
+messagingSenderId: "457553204800",
+appId: "1:457553204800:web:a9ae88735115a76c66b1a5"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
@@ -101,14 +95,69 @@ if(storedNick){ currentUser = { nickname: storedNick }; showChat(); }
 
 // Вход / регистрация
 document.getElementById("loginBtn").addEventListener("click", ()=>{
-  let nick = document.getElementById("nickname").value.trim();
-  if(!isValidNick(nick)) return alert("Ник 3-20 символов, A-Z, a-z, цифры, _");
-  currentUser = { nickname: nick };
-  localStorage.setItem("nickname", nick);
-  showChat();
+let nick = document.getElementById("nickname").value.trim();
+if(!isValidNick(nick)) return alert("Ник 3-20 символов, A-Z, a-z, цифры, _");
+currentUser = { nickname: nick };
+localStorage.setItem("nickname", nick);
+showChat();
 });
 
 // Показ чата и запуск слушателя сообщений
 function showChat(){
-  document.getElementById("loginDiv").style.display = "none";
-  document.getElementById("chatDiv").style.display = "flex";
+document.getElementById("loginDiv").style.display = "none";
+document.getElementById("chatDiv").style.display = "flex";
+startListeningMessages();
+}
+
+// Слушатель сообщений
+function startListeningMessages(){
+db.collection("messages")
+.orderBy("timestamp")
+.onSnapshot(snapshot=>{
+messagesDiv.innerHTML = "";
+snapshot.forEach(doc=>{
+const msg = doc.data();
+if(msg.participants && msg.participants.includes("#Лента")){
+appendMessage(msg);
+}
+});
+messagesDiv.scrollTop = messagesDiv.scrollHeight;
+});
+}
+
+// Добавление сообщения в DOM
+function appendMessage(msg){
+const div = document.createElement("div");
+div.classList.add("message");
+if(msg.sender === currentUser.nickname) div.classList.add("you");
+div.innerHTML = `<span class="id">${msg.sender}:</span>${msg.text}`;
+messagesDiv.appendChild(div);
+}
+
+// Отправка сообщений
+document.getElementById("sendBtn").addEventListener("click", sendMessage);
+document.getElementById("textInput").addEventListener("keypress", function(e){
+if(e.key==="Enter"){ e.preventDefault(); sendMessage(); }
+});
+
+function sendMessage(){
+const text = document.getElementById("textInput").value.trim();
+if(!text) return;
+if(!currentUser) return alert("Введите ник");
+
+db.collection("messages").add({
+sender: currentUser.nickname,
+participants: ["#Лента"],
+text: text,
+timestamp: firebase.firestore.FieldValue.serverTimestamp()
+}).then(()=>{
+document.getElementById("textInput").value = "";
+}).catch(err=>{
+console.error(err);
+alert("Ошибка при отправке");
+});
+}
+</script>
+
+</body>
+</html>
