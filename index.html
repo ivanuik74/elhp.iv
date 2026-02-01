@@ -74,9 +74,8 @@ transition:transform 0.1s ease;
 
 <!-- Логин -->
 <div id="loginDiv">
-<h2>Вход / Регистрация</h2>
+<h2>Выбери ник</h2>
 <input type="text" id="nickname" placeholder="Ник">
-<input type="password" id="password" placeholder="Пароль">
 <button id="loginBtn">Войти</button>
 </div>
 
@@ -103,7 +102,6 @@ transition:transform 0.1s ease;
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <script>
 // === Firebase config ===
@@ -121,21 +119,21 @@ const db = firebase.firestore();
 let currentUser = null;
 let currentChat = null;
 
-// === Вход / Регистрация с ник+пароль ===
+// === Регистрация / Вход по нику ===
 async function login() {
-const nick = document.getElementById("nickname").value.trim();
-const pass = document.getElementById("password").value.trim();
-if(!nick || !pass) return alert("Ник и пароль обязательны!");
+let nick = document.getElementById("nickname").value.trim();
+if(!nick) return alert("Ник не может быть пустым!");
+
+// заменяем недопустимые символы Firestore
+nick = nick.replace(/[.#$[\]]/g, "_");
 
 const userRef = db.collection("users").doc(nick);
 const doc = await userRef.get();
+
 try {
-if(doc.exists) {
-// Проверка пароля
-if(doc.data().password !== pass) return alert("Неверный пароль!");
-} else {
-// Регистрация
-await userRef.set({ nickname: nick, password: pass, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+if(!doc.exists) {
+// регистрация
+await userRef.set({ nickname: nick, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
 }
 
 currentUser = { nickname: nick };
@@ -144,7 +142,7 @@ document.getElementById("messengerDiv").style.display="flex";
 
 loadChats();
 
-} catch(err){ console.error(err); alert("Ошибка"); }
+} catch(err){ console.error(err); alert("Ошибка при входе/регистрации"); }
 }
 document.getElementById("loginBtn").addEventListener("click", login);
 
