@@ -38,7 +38,7 @@ color:#888;
 
 /* ================== ВХОД ================== */
 #loginDiv, #chatDiv {
-opacity:0; /* сначала скрыто */
+opacity:0;
 transition: opacity 0.5s ease;
 }
 #loginDiv {
