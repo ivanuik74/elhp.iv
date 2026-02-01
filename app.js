@@ -1,6 +1,6 @@
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
 
-/* ===== Плавное появление логотипа ===== */
+/* ===== Логотип ===== */
 const logo = document.getElementById("logo");
 setTimeout(() => logo.classList.add("show"), 100);
 
@@ -10,27 +10,18 @@ const input = document.getElementById("messageInput");
 const chat = document.getElementById("chat");
 const sendBtn = document.getElementById("sendBtn");
 
-/* ===== Ввод уникального имени латиницей ===== */
+/* ===== Регистрация пользователя (уникальное имя латиницей) ===== */
 let username = '';
 while (!username) {
-const name = prompt("Введите уникальное имя (латиницей, без пробелов):");
-if (!name) continue;
+const name = prompt("Введите уникальное имя (латиница, цифры, _):") || '';
 if (!/^[a-zA-Z0-9_]+$/.test(name)) {
-alert("Только латиница, цифры и _ разрешены");
+alert("Разрешены только латиница, цифры и _");
 continue;
 }
-
-// Проверка уникальности в базе
-const snapshot = await db.collection("users").doc(name).get();
-if (snapshot.exists) {
-alert("Это имя уже занято, попробуйте другое");
-continue;
-}
-
 username = name;
-// Регистрируем пользователя в базе
-await db.collection("users").doc(username).set({ joinedAt: firebase.firestore.FieldValue.serverTimestamp() });
 }
+
+console.log("Username:", username);
 
 /* ===== Отправка сообщений ===== */
 async function sendMessage() {
@@ -57,7 +48,7 @@ sendMessage();
 }
 });
 
-/* ===== Получение сообщений (реалтайм с анимацией) ===== */
+/* ===== Получение сообщений (плавно) ===== */
 db.collection("messages")
 .orderBy("createdAt", "asc")
 .onSnapshot(snapshot => {
@@ -69,10 +60,8 @@ if (!data.text) return;
 const div = document.createElement("div");
 div.className = "message";
 
-// Свои или чужие сообщения
 div.classList.add(data.username === username ? "own" : "other");
 
-// Формат: [время] имя: текст
 const time = data.createdAt
 ? new Date(data.createdAt.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
 : '';
@@ -89,4 +78,3 @@ chat.scrollTop = chat.scrollHeight;
 });
 
 });
-
