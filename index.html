@@ -31,6 +31,13 @@ font-weight:700;
 opacity:0;
 transform:translateY(-10px);
 transition: all 2s ease;
+display:inline-block;
+}
+
+/* Когда добавляем класс show */
+.logo.show{
+opacity:1;
+transform:translateY(0);
 }
 
 /* elhp.iv подсветка */
@@ -107,6 +114,7 @@ height:45px;
 <body>
 
 <div class="header">
+<!-- Надпись -->
 <div id="logo" class="logo">
 <span class="main">elhp.iv</span><span class="authors">-ivanuik74 & karweqks</span>
 </div>
@@ -129,7 +137,6 @@ storageBucket: "elhp-iv.firebasestorage.app",
 messagingSenderId: "457553204800",
 appId: "1:457553204800:web:a9ae88735115a76c66b1a5"
 };
-
 firebase.initializeApp(firebaseConfig);
 </script>
 
