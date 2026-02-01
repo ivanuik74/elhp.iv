@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini Messenger Mobile</title>
+<title>Mini Messenger</title>
 <style>
 body {
 margin:0; font-family:'Segoe UI', sans-serif; background:#111; color:#fff;
@@ -21,31 +21,33 @@ button { cursor:pointer; background:#444; }
 button:hover { background:#555; }
 
 /* === Messenger === */
-#messengerDiv { display:none; flex:1; flex-direction:column; height:100%; }
+#messengerDiv { display:none; flex:1; display:flex; flex-direction:row; height:100%; }
 
-/* === Header / Поиск === */
-#header {
-background:#222; padding:10px; display:flex; flex-direction:column;
+/* === Sidebar чаты === */
+#sidebar {
+width:300px; background:#1a1a1a; display:flex; flex-direction:column;
 }
 #searchUser {
-padding:8px; border:none; border-radius:6px; background:#333; color:#fff; width:100%;
-margin-bottom:5px;
+padding:8px; border:none; border-radius:6px; background:#333; color:#fff; width:calc(100% - 16px); margin:8px;
 }
-
-/* === Chats list === */
-#chatList {
-flex:0 0 150px; overflow-y:auto; background:#1a1a1a;
-}
+#chatList { flex:1; overflow-y:auto; }
 .chatItem {
 padding:10px; border-bottom:1px solid #333; cursor:pointer;
 }
 .chatItem:hover { background:#333; }
 
-/* === Chat window === */
-#chatWindow { flex:1; display:flex; flex-direction:column; background:#111; }
-#chatTitle { background:#222; padding:10px; font-weight:bold; text-align:center; }
-#messages { flex:1; overflow-y:auto; padding:10px; }
-.message { margin:5px 0; padding:8px 12px; border-radius:10px; background:#222; max-width:80%; word-break:break-word; }
+/* === Chat area === */
+#chatArea {
+flex:1; display:flex; flex-direction:column;
+}
+#chatTitle {
+height:50px; background:#222; display:flex; align-items:center; justify-content:center;
+font-weight:bold; border-bottom:1px solid #333;
+}
+#messages { flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; }
+.message {
+max-width:70%; margin:5px 0; padding:10px; border-radius:15px; background:#222; word-break:break-word;
+}
 .message.you { background:#333; align-self:flex-end; }
 .message .id { font-weight:bold; color:#aaa; margin-right:5px; }
 
@@ -58,10 +60,11 @@ flex:1; padding:10px; border:none; border-radius:6px; background:#333; color:#ff
 }
 #sendBtn { padding:10px 20px; border:none; border-radius:6px; background:#444; cursor:pointer; }
 
+/* === Адаптация для мобилок === */
 @media(max-width:600px){
-#chatList { flex:0 0 120px; }
-#textInput { font-size:16px; }
-#sendBtn { font-size:16px; }
+#messengerDiv { flex-direction:column; }
+#sidebar { width:100%; flex:0 0 auto; order:1; }
+#chatArea { flex:1; order:2; }
 }
 </style>
 </head>
@@ -69,18 +72,18 @@ flex:1; padding:10px; border:none; border-radius:6px; background:#333; color:#ff
 
 <!-- Логин -->
 <div id="loginDiv">
-<h2>Выбери ник (только английские буквы, цифры, _)</h2>
+<h2>Выбери ник (A-Z, a-z, цифры, _)</h2>
 <input type="text" id="nickname" placeholder="Ник">
 <button id="loginBtn">Войти / Зарегистрироваться</button>
 </div>
 
 <!-- Messenger -->
 <div id="messengerDiv">
-<div id="header">
-<input type="text" id="searchUser" placeholder="Поиск пользователя...">
-</div>
+<div id="sidebar">
+<input type="text" id="searchUser" placeholder="Поиск пользователей...">
 <div id="chatList"></div>
-<div id="chatWindow">
+</div>
+<div id="chatArea">
 <div id="chatTitle">Выберите чат</div>
 <div id="messages"></div>
 <div id="inputArea">
@@ -107,11 +110,10 @@ appId: "1:457553204800:web:a9ae88735115a76c66b1a5"
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// === Глобальные переменные ===
 let currentUser = null;
 let currentChat = null;
 
-// === Ник сохраняем в localStorage ===
+// === Ник сохраняем ===
 let storedNick = localStorage.getItem("nickname");
 if(storedNick){
 currentUser = { nickname: storedNick };
@@ -125,10 +127,10 @@ function isValidNick(nick){
 return /^[A-Za-z0-9_]{3,20}$/.test(nick);
 }
 
-// === Регистрация / Вход ===
+// === Вход/Регистрация ===
 document.getElementById("loginBtn").addEventListener("click", async ()=>{
 let nick = document.getElementById("nickname").value.trim();
-if(!isValidNick(nick)) return alert("Ник должен быть 3-20 символов, английские буквы, цифры и _");
+if(!isValidNick(nick)) return alert("Ник 3-20 символов, A-Z, a-z, цифры, _");
 
 const userRef = db.collection("users").doc(nick);
 const doc = await userRef.get();
@@ -158,10 +160,17 @@ if(u.nickname!==currentUser.nickname){
 const div = document.createElement("div");
 div.classList.add("chatItem");
 div.textContent = u.nickname;
-div.addEventListener("click", ()=> openPrivateChat(u.nickname));
+div.addEventListener("click", ()=> openChat(u.nickname));
 chatListDiv.appendChild(div);
 }
 });
+// Добавим публичный чат #Лента сверху
+const feedDiv = document.createElement("div");
+feedDiv.classList.add("chatItem");
+feedDiv.textContent = "#Лента";
+feedDiv.style.fontWeight="bold";
+feedDiv.addEventListener("click", ()=> openChat("#Лента"));
+chatListDiv.prepend(feedDiv);
 }
 
 // === Поиск пользователей ===
@@ -176,18 +185,18 @@ if(u.nickname.toLowerCase().includes(query) && u.nickname!==currentUser.nickname
 const div = document.createElement("div");
 div.classList.add("chatItem");
 div.textContent = u.nickname;
-div.addEventListener("click", ()=> openPrivateChat(u.nickname));
+div.addEventListener("click", ()=> openChat(u.nickname));
 chatListDiv.appendChild(div);
 }
 });
 });
 
-// === Открытие приватного чата ===
+// === Открытие чата ===
 const messagesDiv = document.getElementById("messages");
 const chatTitle = document.getElementById("chatTitle");
-function openPrivateChat(nick){
+function openChat(nick){
 currentChat = nick;
-chatTitle.textContent = "Чат с: " + nick;
+chatTitle.textContent = nick;
 renderMessages();
 }
 
@@ -202,27 +211,40 @@ db.collection("messages")
 messagesDiv.innerHTML="";
 snapshot.forEach(doc=>{
 const msg = doc.data();
-if(msg.participants.includes(currentChat)){
-const div = document.createElement("div");
-div.classList.add("message");
-if(msg.sender===currentUser.nickname) div.classList.add("you");
-div.innerHTML = `<span class="id">${msg.sender}:</span>${msg.text}`;
-messagesDiv.appendChild(div);
+// Публичный чат
+if(currentChat==="#Лента" && msg.participants.includes("#Лента")){
+appendMessage(msg);
+}
+// Приватный чат
+else if(currentChat!=="#Лента" && msg.participants.includes(currentChat)){
+appendMessage(msg);
 }
 });
 messagesDiv.scrollTop = messagesDiv.scrollHeight;
 });
 }
 
-// === Отправка сообщений ===
+// === Добавление сообщения в DOM ===
+function appendMessage(msg){
+const div = document.createElement("div");
+div.classList.add("message");
+if(msg.sender===currentUser.nickname) div.classList.add("you");
+div.innerHTML = `<span class="id">${msg.sender}:</span>${msg.text}`;
+messagesDiv.appendChild(div);
+}
+
+// === Отправка сообщения ===
 document.getElementById("sendBtn").addEventListener("click", async ()=>{
 const text = document.getElementById("textInput").value.trim();
 if(!text) return;
 if(!currentChat) return alert("Выберите чат");
+
+let participants = currentChat==="#Лента" ? ["#Лента"] : [currentUser.nickname,currentChat];
+
 try{
 await db.collection("messages").add({
 sender: currentUser.nickname,
-participants: [currentUser.nickname,currentChat],
+participants: participants,
 text:text,
 timestamp:firebase.firestore.FieldValue.serverTimestamp()
 });
