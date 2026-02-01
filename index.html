@@ -1,3 +1,7 @@
+Иван Кузнецов <ivankuz7265@gmail.com>
+01:02 (0 минут назад)
+кому: мне
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -55,7 +59,7 @@ margin-left: 5px;
 /* ===== Chat ===== */
 .chat {
 display: flex;
-flex-direction: column; /* важно для правильного отображения сообщений */
+flex-direction: column;
 height: calc(100vh - 140px);
 overflow-y: auto;
 padding: 15px;
@@ -67,24 +71,21 @@ border-radius: 10px;
 margin-bottom: 10px;
 max-width: 70%;
 word-wrap: break-word;
-opacity: 0; /* для анимации появления */
+opacity: 0;
 transform: translateY(10px);
 transition: all 0.3s ease;
 }
 
-/* Анимация появления */
 .message.show {
 opacity: 1;
 transform: translateY(0);
 }
 
-/* Свои сообщения */
 .message.own {
 background: #2a2a2a;
 align-self: flex-end;
 }
 
-/* Чужие сообщения */
 .message.other {
 background: #161616;
 align-self: flex-start;
