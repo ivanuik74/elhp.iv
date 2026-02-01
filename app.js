@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
 
 /* ===== Логотип ===== */
 const logo = document.getElementById("logo");
@@ -10,14 +10,27 @@ const input = document.getElementById("messageInput");
 const chat = document.getElementById("chat");
 const sendBtn = document.getElementById("sendBtn");
 
-/* ===== Регистрация пользователя (уникальное имя латиницей) ===== */
-let username = '';
+/* ===== Регистрация пользователя через Firestore ===== */
+let username = localStorage.getItem("username") || "";
+
 while (!username) {
-const name = prompt("Введите уникальное имя (латиница, цифры, _):") || '';
+let name = prompt("Введите уникальное имя (латиница, цифры, _):") || "";
+
 if (!/^[a-zA-Z0-9_]+$/.test(name)) {
 alert("Разрешены только латиница, цифры и _");
 continue;
 }
+
+// Проверяем в базе, есть ли такое имя
+const userDoc = await db.collection("users").doc(name).get();
+if (userDoc.exists) {
+alert("Это имя уже занято, попробуйте другое");
+continue;
+}
+
+// Сохраняем имя в базе и в localStorage
+await db.collection("users").doc(name).set({ joinedAt: firebase.firestore.FieldValue.serverTimestamp() });
+localStorage.setItem("username", name);
 username = name;
 }
 
@@ -48,7 +61,7 @@ sendMessage();
 }
 });
 
-/* ===== Получение сообщений (плавно) ===== */
+/* ===== Получение сообщений (с анимацией) ===== */
 db.collection("messages")
 .orderBy("createdAt", "asc")
 .onSnapshot(snapshot => {
