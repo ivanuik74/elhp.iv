@@ -6,61 +6,32 @@
 <title>Mini Messenger</title>
 <style>
 body {
-margin:0; font-family:'Segoe UI', sans-serif; background:#111; color:#fff;
-height:100vh; display:flex; flex-direction:column;
+margin:0; font-family:'Segoe UI', sans-serif; background:#111; color:#fff; height:100vh; display:flex; flex-direction:column;
 }
-
-/* === Логин === */
-#loginDiv {
-display:flex; flex-direction:column; justify-content:center; align-items:center; flex:1;
-}
-input, button {
-padding:10px; border-radius:6px; border:none; margin:5px 0; width:90%; max-width:300px; background:#222; color:#fff;
-}
+#loginDiv { display:flex; flex-direction:column; justify-content:center; align-items:center; flex:1; }
+input, button { padding:10px; border-radius:6px; border:none; margin:5px 0; width:90%; max-width:300px; background:#222; color:#fff; }
 button { cursor:pointer; background:#444; }
 button:hover { background:#555; }
 
-/* === Messenger === */
+/* Messenger */
 #messengerDiv { display:none; flex:1; display:flex; flex-direction:row; height:100%; }
-
-/* === Sidebar чаты === */
-#sidebar {
-width:300px; background:#1a1a1a; display:flex; flex-direction:column;
-}
-#searchUser {
-padding:8px; border:none; border-radius:6px; background:#333; color:#fff; width:calc(100% - 16px); margin:8px;
-}
+#sidebar { width:300px; background:#1a1a1a; display:flex; flex-direction:column; }
+#searchUser { padding:8px; border:none; border-radius:6px; background:#333; color:#fff; margin:8px; width:calc(100% - 16px); }
 #chatList { flex:1; overflow-y:auto; }
-.chatItem {
-padding:10px; border-bottom:1px solid #333; cursor:pointer;
-}
+.chatItem { padding:10px; border-bottom:1px solid #333; cursor:pointer; }
 .chatItem:hover { background:#333; }
 
-/* === Chat area === */
-#chatArea {
-flex:1; display:flex; flex-direction:column;
-}
-#chatTitle {
-height:50px; background:#222; display:flex; align-items:center; justify-content:center;
-font-weight:bold; border-bottom:1px solid #333;
-}
+#chatArea { flex:1; display:flex; flex-direction:column; }
+#chatTitle { height:50px; background:#222; display:flex; align-items:center; justify-content:center; font-weight:bold; border-bottom:1px solid #333; }
 #messages { flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; }
-.message {
-max-width:70%; margin:5px 0; padding:10px; border-radius:15px; background:#222; word-break:break-word;
-}
+.message { max-width:70%; margin:5px 0; padding:10px; border-radius:15px; background:#222; word-break:break-word; }
 .message.you { background:#333; align-self:flex-end; }
 .message .id { font-weight:bold; color:#aaa; margin-right:5px; }
 
-/* === Input === */
-#inputArea {
-display:flex; padding:5px; background:#222;
-}
-#textInput {
-flex:1; padding:10px; border:none; border-radius:6px; background:#333; color:#fff; margin-right:5px;
-}
+#inputArea { display:flex; padding:5px; background:#222; }
+#textInput { flex:1; padding:10px; border:none; border-radius:6px; background:#333; color:#fff; margin-right:5px; }
 #sendBtn { padding:10px 20px; border:none; border-radius:6px; background:#444; cursor:pointer; }
 
-/* === Адаптация для мобилок === */
 @media(max-width:600px){
 #messengerDiv { flex-direction:column; }
 #sidebar { width:100%; flex:0 0 auto; order:1; }
@@ -70,14 +41,12 @@ flex:1; padding:10px; border:none; border-radius:6px; background:#333; color:#ff
 </head>
 <body>
 
-<!-- Логин -->
 <div id="loginDiv">
 <h2>Выбери ник (A-Z, a-z, цифры, _)</h2>
 <input type="text" id="nickname" placeholder="Ник">
 <button id="loginBtn">Войти / Зарегистрироваться</button>
 </div>
 
-<!-- Messenger -->
 <div id="messengerDiv">
 <div id="sidebar">
 <input type="text" id="searchUser" placeholder="Поиск пользователей...">
@@ -93,10 +62,8 @@ flex:1; padding:10px; border:none; border-radius:6px; background:#333; color:#ff
 </div>
 </div>
 
-<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
 <script>
 // === Firebase config ===
 const firebaseConfig = {
@@ -113,7 +80,6 @@ const db = firebase.firestore();
 let currentUser = null;
 let currentChat = null;
 
-// === Ник сохраняем ===
 let storedNick = localStorage.getItem("nickname");
 if(storedNick){
 currentUser = { nickname: storedNick };
@@ -122,12 +88,12 @@ document.getElementById("messengerDiv").style.display="flex";
 renderChats();
 }
 
-// === Проверка ника ===
+// Проверка ника
 function isValidNick(nick){
 return /^[A-Za-z0-9_]{3,20}$/.test(nick);
 }
 
-// === Вход/Регистрация ===
+// Вход / Регистрация
 document.getElementById("loginBtn").addEventListener("click", async ()=>{
 let nick = document.getElementById("nickname").value.trim();
 if(!isValidNick(nick)) return alert("Ник 3-20 символов, A-Z, a-z, цифры, _");
@@ -149,7 +115,7 @@ renderChats();
 }catch(err){ console.error(err); alert("Ошибка при регистрации"); }
 });
 
-// === Список чатов / пользователей ===
+// Список чатов
 const chatListDiv = document.getElementById("chatList");
 async function renderChats(){
 chatListDiv.innerHTML="";
@@ -164,7 +130,7 @@ div.addEventListener("click", ()=> openChat(u.nickname));
 chatListDiv.appendChild(div);
 }
 });
-// Добавим публичный чат #Лента сверху
+// Публичный чат #Лента
 const feedDiv = document.createElement("div");
 feedDiv.classList.add("chatItem");
 feedDiv.textContent = "#Лента";
@@ -173,7 +139,7 @@ feedDiv.addEventListener("click", ()=> openChat("#Лента"));
 chatListDiv.prepend(feedDiv);
 }
 
-// === Поиск пользователей ===
+// Поиск
 document.getElementById("searchUser").addEventListener("input", async function(){
 const query = this.value.trim().toLowerCase();
 chatListDiv.innerHTML="";
@@ -191,7 +157,7 @@ chatListDiv.appendChild(div);
 });
 });
 
-// === Открытие чата ===
+// Открытие чата
 const messagesDiv = document.getElementById("messages");
 const chatTitle = document.getElementById("chatTitle");
 function openChat(nick){
@@ -200,23 +166,22 @@ chatTitle.textContent = nick;
 renderMessages();
 }
 
-// === Отображение сообщений ===
+// Отображение сообщений
 function renderMessages(){
 if(!currentChat) return;
 messagesDiv.innerHTML="";
 db.collection("messages")
-.where("participants","array-contains",currentUser.nickname)
 .orderBy("timestamp")
 .onSnapshot(snapshot=>{
 messagesDiv.innerHTML="";
 snapshot.forEach(doc=>{
 const msg = doc.data();
-// Публичный чат
+
 if(currentChat==="#Лента" && msg.participants.includes("#Лента")){
 appendMessage(msg);
-}
-// Приватный чат
-else if(currentChat!=="#Лента" && msg.participants.includes(currentChat)){
+} else if(currentChat!=="#Лента" &&
+msg.participants.includes(currentChat) &&
+msg.participants.includes(currentUser.nickname)){
 appendMessage(msg);
 }
 });
@@ -224,7 +189,7 @@ messagesDiv.scrollTop = messagesDiv.scrollHeight;
 });
 }
 
-// === Добавление сообщения в DOM ===
+// Добавление сообщения в DOM
 function appendMessage(msg){
 const div = document.createElement("div");
 div.classList.add("message");
@@ -233,7 +198,7 @@ div.innerHTML = `<span class="id">${msg.sender}:</span>${msg.text}`;
 messagesDiv.appendChild(div);
 }
 
-// === Отправка сообщения ===
+// Отправка сообщения
 document.getElementById("sendBtn").addEventListener("click", async ()=>{
 const text = document.getElementById("textInput").value.trim();
 if(!text) return;
@@ -249,13 +214,10 @@ text:text,
 timestamp:firebase.firestore.FieldValue.serverTimestamp()
 });
 document.getElementById("textInput").value="";
-}catch(err){
-console.error(err);
-alert("Ошибка при отправке");
-}
+}catch(err){ console.error(err); alert("Ошибка при отправке"); }
 });
 
-// === Отправка по Enter ===
+// Enter для отправки
 document.getElementById("textInput").addEventListener("keypress", function(e){
 if(e.key==="Enter"){ e.preventDefault(); document.getElementById("sendBtn").click(); }
 });
