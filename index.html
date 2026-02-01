@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>elhp.com</title>
 
 <!-- Firebase -->
@@ -20,21 +19,37 @@ font-family:Arial, sans-serif;
 
 /* ===== Header ===== */
 .header{
-padding:15px;
+width:100%;
+text-align:center;
+padding:20px;
 border-bottom:1px solid #222;
 }
 
-/* Плавное появление надписи */
+/* ===== Надпись ===== */
 .logo{
-font-weight:600;
+font-size:24px;
+font-weight:700;
 opacity:0;
 transform:translateY(-10px);
-transition:all 2s ease;
+transition: all 2s ease;
 }
 
 .logo.show{
 opacity:1;
 transform:translateY(0);
+}
+
+/* elhp.iv подсветка */
+.logo .main{
+color:white;
+text-shadow: 0 0 8px rgba(255,255,255,0.5);
+}
+
+/* ivanuik74 & karweqks */
+.logo .authors{
+color:#888;
+font-weight:400;
+margin-left:5px;
 }
 
 /* ===== Chat ===== */
@@ -97,7 +112,7 @@ height:45px;
 
 <div class="header">
 <div id="logo" class="logo">
-elhp.com-ivanuik74 & karweqks
+<span class="main">elhp.iv</span><span class="authors">-ivanuik74 & karweqks</span>
 </div>
 </div>
 
