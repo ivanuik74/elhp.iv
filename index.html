@@ -5,26 +5,43 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>elhp.iv — Публичная лента</title>
 <style>
-body {margin:0; font-family:'Segoe UI',sans-serif; background:#111; color:#fff; display:flex; flex-direction:column; height:100vh;}
-/* Светящийся логотип и лента */
-.glow {text-shadow: 0 0 5px #0ff, 0 0 10px #0ff, 0 0 15px #0ff;}
+body {
+margin:0; font-family:'Segoe UI',sans-serif; background:#111; color:#fff; display:flex; flex-direction:column; height:100vh;
+}
 
-/* Название сайта */
-#logo {display:flex; align-items:center; justify-content:center; padding:10px; background:#222; border-bottom:1px solid #333;}
-#logo span { font-size:1.5em; font-weight:bold; }
-#footer {position:absolute; right:10px; top:50%; transform:translateY(-50%); writing-mode: vertical-rl; text-align:center; font-size:0.9em; color:#0ff;}
+/* Верхняя панель с логотипом и авторам */
+#topBar {
+display:flex; align-items:center; justify-content:space-between; padding:10px 20px;
+background:#222; border-bottom:1px solid #333;
+}
+#logo {
+font-size:1.5em; font-weight:bold; color:#0ff;
+text-shadow: 0 0 5px rgba(0,255,255,0.3); /* лёгкое свечение */
+}
+#authors {
+font-size:0.9em; color:#888; /* почти незаметно */
+}
 
 /* Вход */
 #loginDiv {display:flex;flex-direction:column;justify-content:center;align-items:center;flex:1;}
-input,button{padding:10px;border-radius:6px;border:none;margin:5px 0;width:90%;max-width:300px;background:#222;color:#fff;}
+input,button{
+padding:10px;border-radius:6px;border:none;margin:5px 0;width:90%;max-width:300px;background:#222;color:#fff;
+}
 button{cursor:pointer;background:#444;}
 button:hover{background:#555;}
 
 /* Чат */
 #chatDiv{display:none;flex:1;flex-direction:column;height:100%;}
-#chatTitle{background:#222;padding:10px;text-align:center;font-weight:bold;border-bottom:1px solid #333;}
-#messages{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;}
-.message{max-width:70%;margin:5px 0;padding:10px;border-radius:15px;background:#222;word-break:break-word;animation:fadeIn 0.2s;}
+#chatTitle{
+background:#222;padding:10px;text-align:center;font-weight:bold;border-bottom:1px solid #333;
+}
+#messages{
+flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;
+}
+.message{
+max-width:70%;margin:5px 0;padding:10px;border-radius:15px;background:#222;word-break:break-word;
+animation:fadeIn 0.2s;
+}
 .message.you{background:#333;align-self:flex-end;}
 .message .id{font-weight:bold;color:#aaa;margin-right:5px;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
@@ -43,8 +60,11 @@ button:hover{background:#555;}
 </head>
 <body>
 
-<!-- Логотип -->
-<div id="logo"><span class="glow">elhp.iv</span></div>
+<!-- Верхняя панель -->
+<div id="topBar">
+<div id="logo">elhp.iv</div>
+<div id="authors">Сделано karweqks и ivanuik74</div>
+</div>
 
 <!-- Вход -->
 <div id="loginDiv">
@@ -55,16 +75,13 @@ button:hover{background:#555;}
 
 <!-- Чат -->
 <div id="chatDiv">
-<div id="chatTitle"><span class="glow">#Лента</span></div>
+<div id="chatTitle">#Лента</div>
 <div id="messages"></div>
 <div id="inputArea">
 <input type="text" id="textInput" placeholder="Напишите сообщение...">
 <button id="sendBtn">Отправить</button>
 </div>
 </div>
-
-<!-- Подпись авторов сбоку -->
-<div id="footer">Сделано<br>ivanuik74<br>и karweqks</div>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
