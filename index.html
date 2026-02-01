@@ -3,90 +3,107 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mini Social elhp.iv</title>
+<title>Mini Messenger + Лента</title>
 <style>
 body {
-background:#111;
-color:#fff;
-font-family:'Segoe UI', sans-serif;
-margin:0;
+margin:0; font-family:'Segoe UI', sans-serif; background:#111; color:#fff; height:100vh;
+display:flex; flex-direction:column;
 }
+
+/* === Логин === */
+#loginDiv {
+display:flex; flex-direction:column; justify-content:center; align-items:center; flex:1;
+}
+input, button {
+padding:10px; border-radius:6px; border:none; margin:5px 0; width:200px; background:#222; color:#fff;
+}
+button { cursor:pointer; background:#444; }
+button:hover { background:#555; }
+
+/* === Контейнер мессенджера === */
 .container {
-min-height:100vh;
-display:flex;
-justify-content:center;
-align-items:center;
-flex-direction:column;
-padding:20px;
+display:flex; flex:1; height:100%;
 }
-textarea, input {
-width:100%;
-max-width:500px;
-padding:12px;
-border-radius:6px;
-border:none;
-background:#222;
-color:#fff;
-margin-bottom:10px;
+
+/* === Sidebar === */
+#sidebar {
+width:200px; background:#1a1a1a; padding:10px; overflow-y:auto;
 }
-button {
-padding:10px 20px;
-border:none;
-border-radius:6px;
-background:#444;
-color:#fff;
-cursor:pointer;
-transition:transform 0.1s ease;
+
+/* === Chat area === */
+#chatArea {
+flex:1; display:flex; flex-direction:column;
 }
-button:active { transform:scale(0.97); }
-.history {
-margin-top:20px;
-width:100%;
-max-width:500px;
-text-align:left;
+
+/* === Navbar с вкладками === */
+#navbar {
+height:50px; background:#222; display:flex; align-items:center; padding:0 10px;
+}
+#navbar button {
+background:#444; color:#fff; border:none; padding:6px 12px; margin-right:5px; cursor:pointer; border-radius:4px;
+}
+#navbar button.active { background:#666; }
+#chatTitle { font-weight:bold; margin-left:10px; }
+
+/* === Messages === */
+#messages {
+flex:1; padding:10px; overflow-y:auto;
 }
 .message {
-margin-bottom:10px;
-padding:6px 10px;
-border-radius:6px;
-background:#222;
-opacity:0;
-transform:translateY(10px);
-animation:fadeInUp 0.5s forwards;
+margin:5px 0; padding:6px 10px; border-radius:6px; background:#222;
 }
-@keyframes fadeInUp { to { opacity:1; transform:translateY(0);} }
-.message span.id { font-weight:bold; color:#aaa; margin-right:6px;}
-#userInfo { margin-bottom: 10px; font-weight: bold; }
+.message.you { background:#333; text-align:right; }
+.message .id { font-weight:bold; color:#aaa; margin-right:6px; }
+
+/* === Input area === */
+#inputArea {
+display:flex; padding:10px; background:#222;
+}
+#inputArea input {
+flex:1; margin-right:5px; border-radius:6px; border:none; padding:10px; background:#222; color:#fff;
+}
+#inputArea button {
+padding:10px 20px; border:none; border-radius:6px; background:#444; color:#fff; cursor:pointer;
+transition:transform 0.1s ease;
+}
+#inputArea button:active { transform:scale(0.97); }
+
 </style>
+</head>
+<body>
+
+<!-- Логин -->
+<div id="loginDiv">
+<h2>Вход / Регистрация</h2>
+<input type="text" id="nickname" placeholder="Ник">
+<input type="password" id="password" placeholder="Пароль">
+<button id="loginBtn">Войти</button>
+</div>
+
+<!-- Основной мессенджер -->
+<div class="container" id="messengerDiv" style="display:none;">
+<div id="sidebar">
+<h3>Чаты</h3>
+<div id="chatList"></div>
+</div>
+<div id="chatArea">
+<div id="navbar">
+<button id="tabChats" class="active">Чаты</button>
+<button id="tabFeed">Лента</button>
+<span id="chatTitle">Выберите чат</span>
+</div>
+<div id="messages"></div>
+<div id="inputArea">
+<input type="text" id="textInput" placeholder="Напишите сообщение...">
+<button id="sendBtn">Отправить</button>
+</div>
+</div>
+</div>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-
-</head>
-<body>
-
-<div class="container" id="container">
-
-<!-- Регистрация ника -->
-<div id="registerDiv">
-<h2>Выбери себе ник</h2>
-<input type="text" id="nickname" placeholder="Напиши ник...">
-<button id="registerBtn">Войти</button>
-</div>
-
-<!-- Мини-лента -->
-<div id="chatDiv" style="display:none;">
-<div id="userInfo"></div>
-<textarea id="text" placeholder="Напиши здесь..."></textarea>
-<br>
-<button onclick="sendMessage()">Отправить</button>
-
-<div class="history" id="history"></div>
-</div>
-
-</div>
 
 <script>
 // === Firebase config ===
@@ -98,106 +115,149 @@ storageBucket: "elhp-iv.firebasestorage.app",
 messagingSenderId: "457553204800",
 appId: "1:457553204800:web:a9ae88735115a76c66b1a5"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const auth = firebase.auth();
 
-let nickname = localStorage.getItem("nickname");
 let currentUser = null;
+let currentChat = null;
 
-// === Функция регистрации и отображения чата ===
-async function registerAnon(){
-const nickInput = document.getElementById("nickname");
-const nick = nickInput.value.trim();
-if(!nick) return alert("Ник не может быть пустым!");
+// === Вход / Регистрация с ник+пароль ===
+async function login() {
+const nick = document.getElementById("nickname").value.trim();
+const pass = document.getElementById("password").value.trim();
+if(!nick || !pass) return alert("Ник и пароль обязательны!");
 
-// Проверка уникальности ника
 const userRef = db.collection("users").doc(nick);
 const doc = await userRef.get();
-if(doc.exists) return alert("Такой ник уже занят!");
-
 try {
-// Анонимная авторизация
-const userCred = await auth.signInAnonymously();
-currentUser = userCred.user;
+if(doc.exists) {
+// Проверка пароля
+if(doc.data().password !== pass) return alert("Неверный пароль!");
+} else {
+// Регистрация
+await userRef.set({ nickname: nick, password: pass, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+}
 
-// Сохраняем ник в Firestore
-await userRef.set({
-uid: currentUser.uid,
-nickname: nick,
-createdAt: firebase.firestore.FieldValue.serverTimestamp()
+currentUser = { nickname: nick };
+document.getElementById("loginDiv").style.display="none";
+document.getElementById("messengerDiv").style.display="flex";
+
+loadChats();
+
+} catch(err){ console.error(err); alert("Ошибка"); }
+}
+document.getElementById("loginBtn").addEventListener("click", login);
+
+// === Список чатов ===
+async function loadChats() {
+const chatList = document.getElementById("chatList");
+chatList.innerHTML = "";
+const usersSnap = await db.collection("users").get();
+usersSnap.forEach(doc => {
+const u = doc.data();
+if(u.nickname !== currentUser.nickname) {
+const div = document.createElement("div");
+div.textContent = u.nickname;
+div.style.cursor = "pointer";
+div.addEventListener("click", ()=> openChat(u.nickname));
+chatList.appendChild(div);
+}
 });
-
-localStorage.setItem("nickname", nick);
-nickname = nick;
-showChat();
-
-} catch(err) {
-console.error(err);
-alert("Ошибка при входе. Попробуй обновить страницу.");
-}
 }
 
-// Показать чат на всех устройствах
-function showChat(){
-document.getElementById("registerDiv").style.display="none";
-document.getElementById("chatDiv").style.display="block";
-document.getElementById("userInfo").textContent = "Вы вошли как: " + nickname;
+// === Открытие чата ===
+function openChat(chatNick) {
+currentChat = chatNick;
+document.getElementById("chatTitle").textContent = "Чат с: " + chatNick;
 renderMessages();
 }
 
-// Если ник уже есть → автоматически анонимно авторизуемся
-if(nickname){
-auth.signInAnonymously().then(userCred => {
-currentUser = userCred.user;
-showChat();
-}).catch(err => console.error(err));
-}
+// === Отображение сообщений чата ===
+function renderMessages() {
+const messagesDiv = document.getElementById("messages");
+messagesDiv.innerHTML = "";
+if(!currentChat) return;
 
-// === Мини-лента сообщений ===
-const historyBox = document.getElementById("history");
-
-function renderMessages(){
-db.collection("messages").orderBy("timestamp")
-.onSnapshot(snapshot => {
-historyBox.innerHTML = "";
-snapshot.forEach(doc => {
+db.collection("messages")
+.where("participants", "array-contains", currentUser.nickname)
+.orderBy("timestamp")
+.onSnapshot(snapshot=>{
+messagesDiv.innerHTML = "";
+snapshot.forEach(doc=>{
 const msg = doc.data();
+if(msg.participants.includes(currentChat)) {
 const div = document.createElement("div");
 div.classList.add("message");
-div.innerHTML = `<span class="id">${msg.author}:</span>${msg.text}`;
-historyBox.appendChild(div);
+if(msg.sender === currentUser.nickname) div.classList.add("you");
+div.innerHTML = `<span class="id">${msg.sender}:</span>${msg.text}`;
+messagesDiv.appendChild(div);
+}
 });
-historyBox.scrollTop = historyBox.scrollHeight;
+messagesDiv.scrollTop = messagesDiv.scrollHeight;
 });
 }
 
-// Отправка сообщений
-async function sendMessage(){
-const textEl = document.getElementById("text");
-const text = textEl.value.trim();
-if(!text) return;
-if(!nickname || !currentUser) return alert("Сначала выбери ник!");
-
-try {
+// === Отправка сообщений ===
+document.getElementById("sendBtn").addEventListener("click", async ()=>{
+const text = document.getElementById("textInput").value.trim();
+if(!text || !currentChat) return;
 await db.collection("messages").add({
-author: nickname,
-uid: currentUser.uid,
+sender: currentUser.nickname,
+participants: [currentUser.nickname, currentChat],
 text: text,
 timestamp: firebase.firestore.FieldValue.serverTimestamp()
 });
-textEl.value="";
-} catch(err) {
-console.error(err);
-alert("Ошибка при отправке сообщения.");
-}
+document.getElementById("textInput").value="";
+});
+
+// === Вкладки Чаты / Лента ===
+const tabChats = document.getElementById("tabChats");
+const tabFeed = document.getElementById("tabFeed");
+const sidebar = document.getElementById("sidebar");
+const inputArea = document.getElementById("inputArea");
+const chatTitle = document.getElementById("chatTitle");
+
+tabChats.addEventListener("click", ()=>{
+sidebar.style.display="block";
+inputArea.style.display="flex";
+chatTitle.textContent = currentChat ? "Чат с: "+currentChat : "Выберите чат";
+tabChats.classList.add("active");
+tabFeed.classList.remove("active");
+renderMessages();
+});
+
+tabFeed.addEventListener("click", ()=>{
+sidebar.style.display="none";
+inputArea.style.display="none";
+chatTitle.textContent = "Лента всех сообщений";
+tabChats.classList.remove("active");
+tabFeed.classList.add("active");
+renderFeed();
+});
+
+// === Лента всех сообщений ===
+function renderFeed(){
+const messagesDiv = document.getElementById("messages");
+messagesDiv.innerHTML = "";
+
+db.collection("messages").orderBy("timestamp")
+.onSnapshot(snapshot=>{
+messagesDiv.innerHTML = "";
+snapshot.forEach(doc=>{
+const msg = doc.data();
+const div = document.createElement("div");
+div.classList.add("message");
+div.innerHTML = `<span class="id">${msg.sender}:</span>${msg.text}`;
+messagesDiv.appendChild(div);
+});
+messagesDiv.scrollTop = messagesDiv.scrollHeight;
+});
 }
 
-// Привязка кнопки регистрации
-document.getElementById("registerBtn").addEventListener("click", registerAnon);
-
+// === Отправка по Enter ===
+document.getElementById("textInput").addEventListener("keypress", function(e){
+if(e.key === "Enter") { e.preventDefault(); document.getElementById("sendBtn").click(); }
+});
 </script>
-
 </body>
 </html>
