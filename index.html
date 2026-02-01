@@ -17,16 +17,22 @@ background:#222; border-bottom:1px solid #333;
 #logo {
 font-size:1.5em; font-weight:bold; color:#fff;
 opacity:0; /* изначально невидим */
-animation: fadeInLogo 2s forwards; /* анимация появления */
+animation: fadeInLogo 3s forwards; /* медленное появление */
 }
 #authors {
 font-size:0.9em; color:#888;
 }
 
-/* Анимация плавного появления */
+/* Анимация плавного появления логотипа */
 @keyframes fadeInLogo {
-0% { opacity:0; transform: translateY(-10px); }
+0% { opacity:0; transform: translateY(-20px); }
 100% { opacity:1; transform: translateY(0); }
+}
+
+/* Скрываем остальное до появления логотипа */
+#loginDiv, #chatDiv {
+opacity:0;
+transition: opacity 0.5s ease;
 }
 
 /* Вход */
@@ -116,12 +122,21 @@ const db = firebase.firestore();
 let currentUser = null;
 let messagesDiv = document.getElementById("messages");
 
+// Показываем интерфейс после появления логотипа
+document.getElementById("logo").addEventListener("animationend", ()=>{
+// Если ник уже в localStorage — показываем чат, иначе вход
+let storedNick = localStorage.getItem("nickname");
+if(storedNick){
+currentUser = { nickname: storedNick };
+showChat();
+} else {
+document.getElementById("loginDiv").style.display = "flex";
+setTimeout(()=>{ document.getElementById("loginDiv").style.opacity=1; },50);
+}
+});
+
 // Проверка ника
 function isValidNick(nick){ return /^[A-Za-z0-9_]{3,20}$/.test(nick); }
-
-// Проверка localStorage
-let storedNick = localStorage.getItem("nickname");
-if(storedNick){ currentUser = { nickname: storedNick }; showChat(); }
 
 // Вход / регистрация
 document.getElementById("loginBtn").addEventListener("click", ()=>{
@@ -135,7 +150,9 @@ showChat();
 // Показ чата и запуск слушателя сообщений
 function showChat(){
 document.getElementById("loginDiv").style.display = "none";
-document.getElementById("chatDiv").style.display = "flex";
+const chatDiv = document.getElementById("chatDiv");
+chatDiv.style.display="flex";
+setTimeout(()=>{ chatDiv.style.opacity=1; },50);
 startListeningMessages();
 }
 
