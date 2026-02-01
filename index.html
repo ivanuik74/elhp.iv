@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Social elhp.iv</title>
+<style>
+body {
+background:#111;
+color:#fff;
+font-family:'Segoe UI', sans-serif;
+margin:0;
+}
+.container {
+min-height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+flex-direction:column;
+padding:20px;
+}
+textarea, input {
+width:100%;
+max-width:500px;
+padding:12px;
+border-radius:6px;
+border:none;
+background:#222;
+color:#fff;
+margin-bottom:10px;
+}
+button {
+padding:10px 20px;
+border:none;
+border-radius:6px;
+background:#444;
+color:#fff;
+cursor:pointer;
+transition:transform 0.1s ease;
+}
+button:active { transform:scale(0.97); }
+.history {
+margin-top:20px;
+width:100%;
+max-width:500px;
+text-align:left;
+}
+.message {
+margin-bottom:10px;
+padding:6px 10px;
+border-radius:6px;
+background:#222;
+opacity:0;
+transform:translateY(10px);
+animation:fadeInUp 0.5s forwards;
+}
+@keyframes fadeInUp { to { opacity:1; transform:translateY(0);} }
+.message span.id { font-weight:bold; color:#aaa; margin-right:6px;}
+#userInfo { margin-bottom: 10px; font-weight: bold; }
+</style>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+</head>
+<body>
+
+<div class="container" id="container">
+
+<!-- Регистрация ника -->
+<div id="registerDiv">
+<h2>Выбери себе ник</h2>
+<input type="text" id="nickname" placeholder="Напиши ник...">
+<button id="registerBtn">Войти</button>
+</div>
+
+<!-- Мини-лента -->
+<div id="chatDiv" style="display:none;">
+<div id="userInfo"></div>
+<textarea id="text" placeholder="Напиши здесь..."></textarea>
+<br>
+<button onclick="sendMessage()">Отправить</button>
+
+<div class="history" id="history"></div>
+</div>
+
+</div>
+
+<script>
+// === Firebase config ===
+const firebaseConfig = {
+apiKey: "AIzaSyBnI40Y9ti3bnsgPAYg4G9zaM1J8qkk1z8",
+authDomain: "elhp-iv.firebaseapp.com",
+projectId: "elhp-iv",
+storageBucket: "elhp-iv.firebasestorage.app",
+messagingSenderId: "457553204800",
+appId: "1:457553204800:web:a9ae88735115a76c66b1a5"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+let nickname = localStorage.getItem("nickname");
+let currentUser = null;
+
+// === Функция регистрации и отображения чата ===
+async function registerAnon(){
+const nickInput = document.getElementById("nickname");
+const nick = nickInput.value.trim();
+if(!nick) return alert("Ник не может быть пустым!");
+
+// Проверка уникальности ника
+const userRef = db.collection("users").doc(nick);
+const doc = await userRef.get();
+if(doc.exists) return alert("Такой ник уже занят!");
+
+try {
+// Анонимная авторизация
+const userCred = await auth.signInAnonymously();
+currentUser = userCred.user;
+
+// Сохраняем ник в Firestore
+await userRef.set({
+uid: currentUser.uid,
+nickname: nick,
+createdAt: firebase.firestore.FieldValue.serverTimestamp()
+});
+
+localStorage.setItem("nickname", nick);
+nickname = nick;
+showChat();
+
+} catch(err) {
+console.error(err);
+alert("Ошибка при входе. Попробуй обновить страницу.");
+}
+}
+
+// Показать чат на всех устройствах
+function showChat(){
+document.getElementById("registerDiv").style.display="none";
+document.getElementById("chatDiv").style.display="block";
+document.getElementById("userInfo").textContent = "Вы вошли как: " + nickname;
+renderMessages();
+}
+
+// Если ник уже есть → автоматически анонимно авторизуемся
+if(nickname){
+auth.signInAnonymously().then(userCred => {
+currentUser = userCred.user;
+showChat();
+}).catch(err => console.error(err));
+}
+
+// === Мини-лента сообщений ===
+const historyBox = document.getElementById("history");
+
+function renderMessages(){
+db.collection("messages").orderBy("timestamp")
+.onSnapshot(snapshot => {
+historyBox.innerHTML = "";
+snapshot.forEach(doc => {
+const msg = doc.data();
+const div = document.createElement("div");
+div.classList.add("message");
+div.innerHTML = `<span class="id">${msg.author}:</span>${msg.text}`;
+historyBox.appendChild(div);
+});
+historyBox.scrollTop = historyBox.scrollHeight;
+});
+}
+
+// Отправка сообщений
+async function sendMessage(){
+const textEl = document.getElementById("text");
+const text = textEl.value.trim();
+if(!text) return;
+if(!nickname || !currentUser) return alert("Сначала выбери ник!");
+
+try {
+await db.collection("messages").add({
+author: nickname,
+uid: currentUser.uid,
+text: text,
+timestamp: firebase.firestore.FieldValue.serverTimestamp()
+});
+textEl.value="";
+} catch(err) {
+console.error(err);
+alert("Ошибка при отправке сообщения.");
+}
+}
+
+// Привязка кнопки регистрации
+document.getElementById("registerBtn").addEventListener("click", registerAnon);
+
+</script>
+
+</body>
+</html>
