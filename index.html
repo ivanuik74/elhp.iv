@@ -76,9 +76,9 @@ transition:transform 0.1s ease;
 
 <!-- Логин -->
 <div id="loginDiv">
-<h2>Выбери ник</h2>
+<h2>Выбери ник (только английские буквы, цифры, _)</h2>
 <input type="text" id="nickname" placeholder="Ник">
-<button id="loginBtn">Войти</button>
+<button id="loginBtn">Войти / Зарегистрироваться</button>
 </div>
 
 <!-- Основной мессенджер -->
@@ -122,30 +122,45 @@ const db = firebase.firestore();
 let currentUser = null;
 let currentChat = null;
 
-// === Регистрация / Вход по нику ===
+// === Проверка ника ===
+function isValidNick(nick){
+return /^[A-Za-z0-9_]{3,20}$/.test(nick);
+}
+
+// === Загрузка страницы: если есть сохранённый ник ===
+let storedNick = localStorage.getItem("nickname");
+if(storedNick){
+currentUser = { nickname: storedNick };
+document.getElementById("loginDiv").style.display="none";
+document.getElementById("messengerDiv").style.display="flex";
+renderChats();
+setupSearch();
+}
+
+// === Регистрация / Вход ===
 async function login() {
 let nick = document.getElementById("nickname").value.trim();
-if(!nick) return alert("Ник не может быть пустым!");
-nick = nick.replace(/[.#$[\]]/g, "_"); // чистим ник для Firestore
+if(!isValidNick(nick)) return alert("Ник должен быть 3-20 символов, только английские буквы, цифры и _");
 
 const userRef = db.collection("users").doc(nick);
 const doc = await userRef.get();
 
 try {
-if(!doc.exists) {
-// регистрация
-await userRef.set({ nickname: nick, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+if(doc.exists) {
+alert("Ник уже занят!");
+return;
 }
 
+await userRef.set({ nickname: nick, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
 currentUser = { nickname: nick };
+localStorage.setItem("nickname", nick); // сохраняем ник
 document.getElementById("loginDiv").style.display="none";
 document.getElementById("messengerDiv").style.display="flex";
-
 renderChats();
 setupSearch();
-
-} catch(err){ console.error(err); alert("Ошибка при входе/регистрации"); }
+} catch(err){ console.error(err); alert("Ошибка при регистрации"); }
 }
+
 document.getElementById("loginBtn").addEventListener("click", login);
 
 // === Список пользователей (чатов) ===
@@ -155,7 +170,7 @@ chatList.innerHTML = "";
 const usersSnap = await db.collection("users").get();
 usersSnap.forEach(doc=>{
 const u = doc.data();
-if(u.nickname !== currentUser.nickname) {
+if(u.nickname !== currentUser.nickname){
 const div = document.createElement("div");
 div.textContent = u.nickname;
 div.style.cursor = "pointer";
@@ -176,7 +191,7 @@ if(!query) return;
 const usersSnap = await db.collection("users").get();
 usersSnap.forEach(doc=>{
 const u = doc.data();
-if(u.nickname.toLowerCase().includes(query) && u.nickname !== currentUser.nickname) {
+if(u.nickname.toLowerCase().includes(query) && u.nickname !== currentUser.nickname){
 const div = document.createElement("div");
 div.textContent = u.nickname;
 div.style.cursor = "pointer";
@@ -188,7 +203,7 @@ resultsDiv.appendChild(div);
 }
 
 // === Открытие приватного чата ===
-function openPrivateChat(chatNick) {
+function openPrivateChat(chatNick){
 currentChat = chatNick;
 document.getElementById("chatTitle").textContent = "Чат с: " + chatNick;
 sidebar.style.display = "block";
@@ -211,7 +226,7 @@ db.collection("messages")
 messagesDiv.innerHTML = "";
 snapshot.forEach(doc=>{
 const msg = doc.data();
-if(msg.participants.includes(currentChat)) {
+if(msg.participants.includes(currentChat)){
 const div = document.createElement("div");
 div.classList.add("message");
 if(msg.sender === currentUser.nickname) div.classList.add("you");
@@ -226,7 +241,9 @@ messagesDiv.scrollTop = messagesDiv.scrollHeight;
 // === Отправка приватного сообщения ===
 document.getElementById("sendBtn").addEventListener("click", async ()=>{
 const text = document.getElementById("textInput").value.trim();
-if(!text || !currentChat) return;
+if(!text) return alert("Введите сообщение");
+if(!currentChat) return alert("Выберите чат");
+try {
 await db.collection("messages").add({
 sender: currentUser.nickname,
 participants: [currentUser.nickname, currentChat],
@@ -234,6 +251,10 @@ text: text,
 timestamp: firebase.firestore.FieldValue.serverTimestamp()
 });
 document.getElementById("textInput").value="";
+} catch(err){
+console.error(err);
+alert("Ошибка при отправке");
+}
 });
 
 // === Вкладки Чаты / Лента ===
