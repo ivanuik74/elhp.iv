@@ -1,4 +1,4 @@
-// Firebase config
+// ==== Firebase config ====
 const firebaseConfig = {
 apiKey: "AIzaSyBnI40Y9ti3bnsgPAYg4G9zaM1J8qkk1z8",
 authDomain: "elhp-iv.firebaseapp.com",
@@ -12,86 +12,130 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 let currentUser = null;
+const messagesDiv = document.getElementById("messages");
 
-// Проверка ника
-function isValidNick(nick){
-return /^[A-Za-z0-9_]{3,20}$/.test(nick);
-}
-
-// Проверка localStorage
+// ==== Логотип появляется первым ====
+document.getElementById("logo").addEventListener("animationend", ()=>{
 let storedNick = localStorage.getItem("nickname");
 if(storedNick){
-currentUser = { nickname: storedNick };
+// Получаем цвет ника из Firestore
+db.collection("users").doc(storedNick).get().then(doc=>{
+if(doc.exists){
+currentUser = { nickname: storedNick, color: doc.data().color };
 showChat();
+} else {
+showLogin();
+}
+});
+} else {
+showLogin();
+}
+});
+
+// ==== Функции отображения ====
+function showLogin(){
+document.getElementById("loginDiv").style.display="flex";
+setTimeout(()=>{ document.getElementById("loginDiv").style.opacity=1; },50);
 }
 
-// Вход / регистрация
-document.getElementById("loginBtn").addEventListener("click", ()=>{
+function showChat(){
+document.getElementById("loginDiv").style.display="none";
+const chatDiv = document.getElementById("chatDiv");
+chatDiv.style.display="flex";
+setTimeout(()=>{ chatDiv.style.opacity=1; },50);
+startListeningMessages();
+}
+
+// ==== Проверка ника ====
+function isValidNick(nick){ return /^[A-Za-z0-9_]{3,20}$/.test(nick); }
+
+// ==== Генерация уникального цвета ====
+function getRandomColor(existingColors){
+let color;
+do {
+color = `hsl(${Math.floor(Math.random()*360)}, 70%, 60%)`;
+} while(existingColors.has(color));
+return color;
+}
+
+// ==== Регистрация с уникальным цветом ====
+document.getElementById("loginBtn").addEventListener("click", async ()=>{
 let nick = document.getElementById("nickname").value.trim();
 if(!isValidNick(nick)) return alert("Ник 3-20 символов, A-Z, a-z, цифры, _");
 
-currentUser = { nickname: nick };
-localStorage.setItem("nickname", nick);
-showChat();
+try {
+const userRef = db.collection("users").doc(nick);
+const doc = await userRef.get();
+if(doc.exists) return alert("Такой ник уже занят!");
+
+// Получаем уже использованные цвета
+const usersSnapshot = await db.collection("users").get();
+let existingColors = new Set();
+usersSnapshot.forEach(d=>{
+if(d.data().color) existingColors.add(d.data().color);
 });
 
-// Показ чата
-function showChat(){
-document.getElementById("loginDiv").style.display = "none";
-document.getElementById("chatDiv").style.display = "flex";
-renderMessages();
-}
+// Генерируем уникальный цвет
+const color = getRandomColor(existingColors);
 
-// Отображение сообщений
-const messagesDiv = document.getElementById("messages");
-function renderMessages(){
-db.collection("messages")
-.orderBy("timestamp")
-.onSnapshot(snapshot=>{
+// Сохраняем ник и цвет
+await userRef.set({
+createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+color: color
+});
+
+currentUser = { nickname: nick, color: color };
+localStorage.setItem("nickname", nick);
+showChat();
+
+} catch(err){
+console.error(err);
+alert("Ошибка при регистрации ника.");
+}
+});
+
+// ==== Слушаем сообщения ====
+function startListeningMessages(){
+db.collection("messages").orderBy("timestamp").onSnapshot(snapshot=>{
 messagesDiv.innerHTML = "";
 snapshot.forEach(doc=>{
 const msg = doc.data();
-if(msg.participants.includes("#Лента")){
 appendMessage(msg);
-}
 });
 messagesDiv.scrollTop = messagesDiv.scrollHeight;
 });
 }
 
-// Добавление сообщения в DOM
+// ==== Добавляем сообщение ====
 function appendMessage(msg){
 const div = document.createElement("div");
 div.classList.add("message");
 if(msg.sender === currentUser.nickname) div.classList.add("you");
-div.innerHTML = `<span class="id">${msg.sender}:</span>${msg.text}`;
+const nickColor = msg.color || "#fff";
+div.innerHTML = `<span class="id" style="color:${nickColor}">${msg.sender}:</span> ${msg.text}`;
 messagesDiv.appendChild(div);
 }
 
-// Отправка сообщений
-document.getElementById("sendBtn").addEventListener("click", async ()=>{
+// ==== Отправка сообщения ====
+document.getElementById("sendBtn").addEventListener("click", sendMessage);
+document.getElementById("textInput").addEventListener("keypress", function(e){
+if(e.key==="Enter"){ e.preventDefault(); sendMessage(); }
+});
+
+function sendMessage(){
 const text = document.getElementById("textInput").value.trim();
 if(!text) return;
 if(!currentUser) return alert("Введите ник");
 
-try{
-await db.collection("messages").add({
+db.collection("messages").add({
 sender: currentUser.nickname,
-participants: ["#Лента"],
+color: currentUser.color,
 text: text,
 timestamp: firebase.firestore.FieldValue.serverTimestamp()
-});
+}).then(()=>{
 document.getElementById("textInput").value = "";
-}catch(err){
+}).catch(err=>{
 console.error(err);
 alert("Ошибка при отправке");
-}
 });
-
-// Отправка по Enter
-document.getElementById("textInput").addEventListener("keypress", function(e){
-if(e.key === "Enter"){
-e.preventDefault();
-document.getElementById("sendBtn").click();
 }
-});
