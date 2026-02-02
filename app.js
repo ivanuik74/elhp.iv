@@ -1,11 +1,3 @@
-// ================== Firebase SDK ==================
-// Firebase App
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
-// Auth
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
-// Firestore
-import { getFirestore, collection, addDoc, query, orderBy, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js";
-
 // ================== Firebase Config ==================
 const firebaseConfig = {
 apiKey: "AIzaSyA8YZF-7X2i2oJEMfuSVGH-2SnpbEFj6o4",
@@ -17,11 +9,11 @@ appId: "1:393716398102:web:6912b00e9bcf7618af5d37"
 };
 
 // ================== Firebase Init ==================
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-// ================== НИКНЕЙМ ПОЛЬЗОВАТЕЛЯ ==================
+// ================== Никнейм пользователя ==================
 let username = localStorage.getItem("username");
 if(!username){
 const letters = "abcdefghijklmnopqrstuvwxyz";
@@ -35,25 +27,24 @@ localStorage.setItem("username", username);
 
 // ================== Анонимная авторизация ==================
 let currentUser = null;
+auth.signInAnonymously().catch(err => console.error("Auth error:", err));
 
-signInAnonymously(auth).catch(err => console.error("Auth error:", err));
-
-onAuthStateChanged(auth, (user) => {
+auth.onAuthStateChanged(user=>{
 if(user){
 currentUser = user;
-console.log("Анонимный пользователь UID:", user.uid);
-loadMessagesFromFirestore(); // Загружаем сообщения после авторизации
+console.log("Анонимный UID:", user.uid);
+loadMessagesFromFirestore();
 }
 });
 
-// ================== ВРЕМЯ ==================
+// ================== Время ==================
 function getTime(){
 const d = new Date();
 return d.getHours().toString().padStart(2,'0') + ":" +
 d.getMinutes().toString().padStart(2,'0');
 }
 
-// ================== СКРОЛЛ ==================
+// ================== Скролл ==================
 function scrollToBottom(){
 const chat = document.getElementById("messages");
 setTimeout(()=>{
@@ -61,7 +52,7 @@ chat.scrollTop = chat.scrollHeight;
 },50);
 }
 
-// ================== СОЗДАНИЕ HTML ==================
+// ================== Создание HTML ==================
 function createMessageHTML(text,time,isMine,user){
 return `
 <div class="message ${isMine ? "mine" : ""}">
@@ -72,7 +63,7 @@ return `
 `;
 }
 
-// ================== ДОБАВИТЬ СООБЩЕНИЕ ==================
+// ================== Добавление сообщения ==================
 function addMessage(msg){
 const chat = document.getElementById("messages");
 chat.innerHTML += createMessageHTML(
@@ -84,8 +75,8 @@ msg.user
 scrollToBottom();
 }
 
-// ================== ОТПРАВКА СООБЩЕНИЯ ==================
-async function sendMessage(){
+// ================== Отправка сообщения ==================
+function sendMessage(){
 const input = document.getElementById("messageInput");
 const text = input.value.trim();
 if(!text || !currentUser) return;
@@ -94,22 +85,18 @@ const msg = {
 text: text,
 userId: currentUser.uid,
 nickname: username,
-createdAt: serverTimestamp()
+createdAt: firebase.firestore.FieldValue.serverTimestamp()
 };
 
-try{
-await addDoc(collection(db,"messages"), msg);
-input.value = "";
-}catch(err){
-console.error("Ошибка отправки:", err);
-}
+db.collection("messages").add(msg)
+.then(()=>{ input.value=""; })
+.catch(err=>console.error("Ошибка отправки:", err));
 }
 
-// ================== ПОЛУЧЕНИЕ СООБЩЕНИЙ В РЕАЛЬНОМ ВРЕМЕНИ ==================
+// ================== Получение сообщений в реальном времени ==================
 function loadMessagesFromFirestore(){
-const q = query(collection(db,"messages"), orderBy("createdAt"));
-onSnapshot(q, (snapshot) => {
-snapshot.docChanges().forEach(change => {
+db.collection("messages").orderBy("createdAt").onSnapshot(snapshot=>{
+snapshot.docChanges().forEach(change=>{
 if(change.type === "added"){
 const data = change.doc.data();
 addMessage({
@@ -124,7 +111,5 @@ user: data.nickname
 
 // ================== ENTER ==================
 document.getElementById("messageInput").addEventListener("keydown", e=>{
-if(e.key === "Enter"){
-sendMessage();
-}
+if(e.key === "Enter") sendMessage();
 });
