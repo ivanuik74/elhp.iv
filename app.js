@@ -1,127 +1,130 @@
-document.addEventListener("DOMContentLoaded", async () => {
+// ================== Firebase SDK ==================
+// Firebase App
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
+// Auth
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
+// Firestore
+import { getFirestore, collection, addDoc, query, orderBy, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js";
 
-/* ===== Логотип ===== */
-const logo = document.getElementById("logo");
-setTimeout(() => logo.classList.add("show"), 100);
+// ================== Firebase Config ==================
+const firebaseConfig = {
+apiKey: "AIzaSyA8YZF-7X2i2oJEMfuSVGH-2SnpbEFj6o4",
+authDomain: "elhp-iv-7be7e.firebaseapp.com",
+projectId: "elhp-iv-7be7e",
+storageBucket: "elhp-iv-7be7e.appspot.com",
+messagingSenderId: "393716398102",
+appId: "1:393716398102:web:6912b00e9bcf7618af5d37"
+};
 
-/* ===== Firebase ===== */
-const db = firebase.firestore();
-const input = document.getElementById("messageInput");
-const chat = document.getElementById("chat");
-const typingIndicator = document.getElementById("typingIndicator");
-const sendBtn = document.getElementById("sendBtn");
+// ================== Firebase Init ==================
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-/* ===== Регистрация пользователя через Firestore ===== */
-let username = localStorage.getItem("username") || "";
-
-while (!username) {
-let name = prompt("Введите уникальное имя (латиница, цифры, _):") || "";
-
-if (!/^[a-zA-Z0-9_]+$/.test(name)) {
-alert("Разрешены только латиница, цифры и _");
-continue;
+// ================== НИКНЕЙМ ПОЛЬЗОВАТЕЛЯ ==================
+let username = localStorage.getItem("username");
+if(!username){
+const letters = "abcdefghijklmnopqrstuvwxyz";
+let name = "";
+for(let i=0;i<6;i++){
+name += letters[Math.floor(Math.random()*letters.length)];
 }
-
-const userDoc = await db.collection("users").doc(name).get();
-if (userDoc.exists) {
-alert("Это имя уже занято, попробуйте другое");
-continue;
-}
-
-await db.collection("users").doc(name).set({ joinedAt: firebase.firestore.FieldValue.serverTimestamp() });
-localStorage.setItem("username", name);
 username = name;
+localStorage.setItem("username", username);
 }
 
-console.log("Username:", username);
+// ================== Анонимная авторизация ==================
+let currentUser = null;
 
-/* ===== Функция автоскролла ===== */
-function scrollToBottom() {
-chat.scrollTop = chat.scrollHeight - chat.clientHeight + 20;
+signInAnonymously(auth).catch(err => console.error("Auth error:", err));
+
+onAuthStateChanged(auth, (user) => {
+if(user){
+currentUser = user;
+console.log("Анонимный пользователь UID:", user.uid);
+loadMessagesFromFirestore(); // Загружаем сообщения после авторизации
 }
-
-/* ===== Отправка сообщений ===== */
-async function sendMessage() {
-const text = input.value.trim();
-if (!text) return;
-
-try {
-await db.collection("messages").add({
-text: text,
-username: username,
-createdAt: firebase.firestore.FieldValue.serverTimestamp()
 });
-input.value = "";
 
-// После отправки убираем индикатор набора
-db.collection("typing").doc(username).set({ typing: false });
-} catch (err) {
+// ================== ВРЕМЯ ==================
+function getTime(){
+const d = new Date();
+return d.getHours().toString().padStart(2,'0') + ":" +
+d.getMinutes().toString().padStart(2,'0');
+}
+
+// ================== СКРОЛЛ ==================
+function scrollToBottom(){
+const chat = document.getElementById("messages");
+setTimeout(()=>{
+chat.scrollTop = chat.scrollHeight;
+},50);
+}
+
+// ================== СОЗДАНИЕ HTML ==================
+function createMessageHTML(text,time,isMine,user){
+return `
+<div class="message ${isMine ? "mine" : ""}">
+<div class="msgUser">${user}</div>
+<div class="msgText">${text}</div>
+<div class="msgTime">${time}</div>
+</div>
+`;
+}
+
+// ================== ДОБАВИТЬ СООБЩЕНИЕ ==================
+function addMessage(msg){
+const chat = document.getElementById("messages");
+chat.innerHTML += createMessageHTML(
+msg.text,
+msg.time,
+msg.user === username,
+msg.user
+);
+scrollToBottom();
+}
+
+// ================== ОТПРАВКА СООБЩЕНИЯ ==================
+async function sendMessage(){
+const input = document.getElementById("messageInput");
+const text = input.value.trim();
+if(!text || !currentUser) return;
+
+const msg = {
+text: text,
+userId: currentUser.uid,
+nickname: username,
+createdAt: serverTimestamp()
+};
+
+try{
+await addDoc(collection(db,"messages"), msg);
+input.value = "";
+}catch(err){
 console.error("Ошибка отправки:", err);
 }
 }
 
-sendBtn.addEventListener("click", sendMessage);
-input.addEventListener("keydown", e => {
-if (e.key === "Enter") {
-e.preventDefault();
+// ================== ПОЛУЧЕНИЕ СООБЩЕНИЙ В РЕАЛЬНОМ ВРЕМЕНИ ==================
+function loadMessagesFromFirestore(){
+const q = query(collection(db,"messages"), orderBy("createdAt"));
+onSnapshot(q, (snapshot) => {
+snapshot.docChanges().forEach(change => {
+if(change.type === "added"){
+const data = change.doc.data();
+addMessage({
+text: data.text,
+time: data.createdAt ? new Date(data.createdAt.seconds*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : getTime(),
+user: data.nickname
+});
+}
+});
+});
+}
+
+// ================== ENTER ==================
+document.getElementById("messageInput").addEventListener("keydown", e=>{
+if(e.key === "Enter"){
 sendMessage();
 }
-});
-
-/* ===== Индикатор набора сообщений ===== */
-const typingRef = db.collection("typing").doc(username);
-
-input.addEventListener("input", () => {
-typingRef.set({ typing: input.value.length > 0 });
-});
-
-window.addEventListener("beforeunload", () => {
-typingRef.set({ typing: false });
-});
-
-db.collection("typing").onSnapshot(snapshot => {
-const typingUsers = [];
-snapshot.forEach(doc => {
-if (doc.id !== username && doc.data().typing) {
-typingUsers.push(doc.id);
-}
-});
-typingIndicator.textContent = typingUsers.length > 0
-? `${typingUsers.join(", ")} печатает...`
-: "";
-});
-
-/* ===== Получение сообщений ===== */
-db.collection("messages")
-.orderBy("createdAt", "asc")
-.onSnapshot(snapshot => {
-snapshot.docChanges().forEach(change => {
-if (change.type === "added") {
-const data = change.doc.data();
-if (!data.text) return;
-
-const div = document.createElement("div");
-div.className = "message";
-div.classList.add(data.username === username ? "own" : "other");
-
-const time = data.createdAt
-? new Date(data.createdAt.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-: '';
-div.textContent = `[${time}] ${data.username}: ${data.text}`;
-
-chat.appendChild(div);
-
-// Мини-подсветка нового сообщения
-div.classList.add("new");
-setTimeout(() => div.classList.remove("new"), 1000);
-
-// Анимация появления
-setTimeout(() => div.classList.add("show"), 10);
-
-// Автоскролл
-scrollToBottom();
-}
-});
-});
-
 });
