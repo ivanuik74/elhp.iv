@@ -12,8 +12,6 @@ background:#000;
 font-family: system-ui;
 color:white;
 }
-
-/* ЧАТ */
 .messages{
 height:100vh;
 overflow-y:auto;
@@ -21,8 +19,6 @@ padding:15px;
 padding-bottom:110px;
 box-sizing:border-box;
 }
-
-/* СООБЩЕНИЕ */
 .message{
 max-width:70%;
 padding:10px 12px 20px 12px;
@@ -32,26 +28,19 @@ position:relative;
 background:#1c1c1c;
 animation: msgAppear .2s ease;
 }
-
 .mine{
 margin-left:auto;
 background:#2a2a2a;
 }
-
-/* ТЕКСТ */
 .msgText{
 font-size:15px;
 word-wrap:break-word;
 }
-
-/* USERNAME */
 .msgUser{
 font-size:12px;
 opacity:.7;
 margin-bottom:2px;
 }
-
-/* ВРЕМЯ */
 .msgTime{
 position:absolute;
 right:8px;
@@ -59,8 +48,6 @@ bottom:4px;
 font-size:10px;
 opacity:.6;
 }
-
-/* АНИМАЦИЯ */
 @keyframes msgAppear{
 from{
 transform:translateY(10px);
@@ -71,8 +58,6 @@ transform:translateY(0);
 opacity:1;
 }
 }
-
-/* INPUT BAR */
 .inputBar{
 position:fixed;
 bottom:0;
@@ -85,7 +70,6 @@ display:flex;
 gap:8px;
 box-sizing:border-box;
 }
-
 .inputBar input{
 flex:1;
 padding:12px;
@@ -95,7 +79,6 @@ outline:none;
 background:#1c1c1c;
 color:white;
 }
-
 .inputBar button{
 width:50px;
 border:none;
@@ -107,7 +90,6 @@ cursor:pointer;
 </head>
 
 <body>
-
 <div id="messages" class="messages"></div>
 
 <div class="inputBar">
@@ -115,6 +97,12 @@ cursor:pointer;
 <button onclick="sendMessage()">➤</button>
 </div>
 
-<script type="module" src="app.js"></script>
+<!-- Firebase Compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.1.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.1.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore-compat.js"></script>
+
+<!-- Подключаем JS отдельно -->
+<script src="app.js"></script>
 </body>
 </html>
