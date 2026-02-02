@@ -8,6 +8,7 @@ setTimeout(() => logo.classList.add("show"), 100);
 const db = firebase.firestore();
 const input = document.getElementById("messageInput");
 const chat = document.getElementById("chat");
+const typingIndicator = document.getElementById("typingIndicator");
 const sendBtn = document.getElementById("sendBtn");
 
 /* ===== Регистрация пользователя через Firestore ===== */
@@ -21,14 +22,12 @@ alert("Разрешены только латиница, цифры и _");
 continue;
 }
 
-// Проверяем в базе, есть ли такое имя
 const userDoc = await db.collection("users").doc(name).get();
 if (userDoc.exists) {
 alert("Это имя уже занято, попробуйте другое");
 continue;
 }
 
-// Сохраняем имя в базе и в localStorage
 await db.collection("users").doc(name).set({ joinedAt: firebase.firestore.FieldValue.serverTimestamp() });
 localStorage.setItem("username", name);
 username = name;
@@ -38,7 +37,6 @@ console.log("Username:", username);
 
 /* ===== Функция автоскролла ===== */
 function scrollToBottom() {
-// Скролл с учётом футера и небольшой подстраховки
 chat.scrollTop = chat.scrollHeight - chat.clientHeight + 20;
 }
 
@@ -54,6 +52,9 @@ username: username,
 createdAt: firebase.firestore.FieldValue.serverTimestamp()
 });
 input.value = "";
+
+// После отправки убираем индикатор набора
+db.collection("typing").doc(username).set({ typing: false });
 } catch (err) {
 console.error("Ошибка отправки:", err);
 }
@@ -67,7 +68,30 @@ sendMessage();
 }
 });
 
-/* ===== Получение сообщений (с анимацией и автоскроллом) ===== */
+/* ===== Индикатор набора сообщений ===== */
+const typingRef = db.collection("typing").doc(username);
+
+input.addEventListener("input", () => {
+typingRef.set({ typing: input.value.length > 0 });
+});
+
+window.addEventListener("beforeunload", () => {
+typingRef.set({ typing: false });
+});
+
+db.collection("typing").onSnapshot(snapshot => {
+const typingUsers = [];
+snapshot.forEach(doc => {
+if (doc.id !== username && doc.data().typing) {
+typingUsers.push(doc.id);
+}
+});
+typingIndicator.textContent = typingUsers.length > 0
+? `${typingUsers.join(", ")} печатает...`
+: "";
+});
+
+/* ===== Получение сообщений ===== */
 db.collection("messages")
 .orderBy("createdAt", "asc")
 .onSnapshot(snapshot => {
@@ -78,7 +102,6 @@ if (!data.text) return;
 
 const div = document.createElement("div");
 div.className = "message";
-
 div.classList.add(data.username === username ? "own" : "other");
 
 const time = data.createdAt
@@ -88,10 +111,14 @@ div.textContent = `[${time}] ${data.username}: ${data.text}`;
 
 chat.appendChild(div);
 
-// Мини-анимация появления
+// Мини-подсветка нового сообщения
+div.classList.add("new");
+setTimeout(() => div.classList.remove("new"), 1000);
+
+// Анимация появления
 setTimeout(() => div.classList.add("show"), 10);
 
-// Автоскролл после добавления сообщения
+// Автоскролл
 scrollToBottom();
 }
 });
