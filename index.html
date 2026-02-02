@@ -87,6 +87,23 @@ background: #161616;
 align-self: flex-start;
 }
 
+/* Мини-подсветка нового сообщения */
+.message.new {
+animation: highlight 1s ease;
+}
+
+@keyframes highlight {
+from { background-color: #2a4; }
+to { background-color: #161616; }
+}
+
+/* ===== Индикатор набора сообщений ===== */
+#typingIndicator {
+padding: 5px 15px;
+color: #8f8;
+font-size: 14px;
+}
+
 /* ===== Bottom ===== */
 .bottom {
 position: fixed;
@@ -138,6 +155,8 @@ height: 45px;
 </div>
 
 <div id="chat" class="chat"></div>
+<!-- Индикатор набора сообщений -->
+<div id="typingIndicator"></div>
 
 <div class="bottom">
 <input id="messageInput" placeholder="Написать...">
@@ -160,4 +179,3 @@ firebase.initializeApp(firebaseConfig);
 <script src="app.js"></script>
 </body>
 </html>
-
