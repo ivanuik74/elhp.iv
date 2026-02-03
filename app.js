@@ -27,22 +27,7 @@ const messageInput = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
 const messagesDiv = document.getElementById("messages");
 
-// ===== AUTH =====
 let currentUser = null;
-signInAnonymously(auth);
-
-onAuthStateChanged(auth, (user)=>{
-if(user){
-currentUser = user;
-console.log("Auth OK", user.uid);
-// Если ник уже есть, показываем чат
-const savedNick = localStorage.getItem("username");
-if(savedNick){
-overlay.style.display="none";
-startRealtime();
-}
-}
-});
 
 // ===== CHAT =====
 function scrollToBottom(){ setTimeout(()=> messagesDiv.scrollTop = messagesDiv.scrollHeight, 50); }
@@ -108,6 +93,8 @@ if(e.key==="Enter") sendMessage();
 // ===== REGISTRATION =====
 async function registerNick(){
 const nick = nickInput.value.trim();
+registerError.textContent = "";
+
 if(!nick){
 registerError.textContent="Введите ник";
 return;
@@ -117,7 +104,6 @@ registerError.textContent="Только английские буквы и ци�
 return;
 }
 
-// Проверка уникальности
 const usersRef = collection(db, "users");
 const q = query(usersRef, where("nick","==",nick));
 const snapshot = await getDocs(q);
@@ -129,21 +115,21 @@ return;
 
 // Сохраняем ник
 localStorage.setItem("username", nick);
-addDoc(usersRef,{nick});
-overlay.style.display="none";
 
+// Анонимная регистрация
+signInAnonymously(auth).then(userCredential=>{
+currentUser = userCredential.user;
+overlay.style.display="none";
+messageInput.disabled = false;
+sendBtn.disabled = false;
 startRealtime();
+}).catch(err=>{
+registerError.textContent="Ошибка регистрации";
+console.error(err);
+});
 }
 
 registerBtn.addEventListener("click", registerNick);
 nickInput.addEventListener("keydown", e=>{
 if(e.key==="Enter") registerNick();
 });
-
-// ===== LOCAL HISTORY =====
-function loadMessages(){
-let messages = JSON.parse(localStorage.getItem("messages")||"[]");
-messages.forEach(msg=> addMessage(msg));
-scrollToBottom();
-}
-loadMessages();
