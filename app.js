@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, getDoc, doc, getDocs, where, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, getDoc, doc, getDocs, where, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ===== INIT =====
 const firebaseConfig = {
@@ -27,6 +27,7 @@ const sendBtn = document.getElementById("sendBtn");
 const messagesDiv = document.getElementById("messages");
 
 let currentUser = null;
+let currentNick = "";
 
 // ===== CHAT =====
 function scrollToBottom(){ setTimeout(()=> messagesDiv.scrollTop = messagesDiv.scrollHeight, 50); }
@@ -43,7 +44,7 @@ return `
 function addMessage(msg){
 messagesDiv.innerHTML += createMessageHTML(
 msg.text,
-msg.time || msg.createdAt,
+msg.time || (msg.createdAt && new Date(msg.createdAt.seconds*1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})),
 msg.uid === currentUser?.uid,
 msg.nick
 );
@@ -57,25 +58,22 @@ onSnapshot(q, snapshot=>{
 messagesDiv.innerHTML="";
 snapshot.forEach(doc=>{
 const data = doc.data();
-data.createdAt = data.createdAt ? new Date(data.createdAt.seconds*1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : "";
 addMessage(data);
 });
 });
 }
 
 // ===== SEND MESSAGE =====
-function sendMessage(){
+async function sendMessage(){
 const text = messageInput.value.trim();
 if(!text || !currentUser) return;
 
-addMessage({text, nick: nickInput.value, uid: currentUser.uid, time:new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})});
-
 const messagesRef = collection(db, "messages");
-addDoc(messagesRef,{
+await addDoc(messagesRef,{
 text,
 uid: currentUser.uid,
-nick: nickInput.value,
-createdAt: new Date()
+nick: currentNick,
+createdAt: serverTimestamp()
 });
 
 messageInput.value="";
@@ -112,7 +110,8 @@ const snapshot = await getDocs(q);
 if(!snapshot.empty){ registerError.textContent="Этот ник уже занят"; return; }
 
 // Создание пользователя
-await setDoc(userRef,{nick, createdAt:new Date()});
+await setDoc(userRef,{nick, createdAt: serverTimestamp()});
+currentNick = nick;
 overlay.style.display="none";
 messageInput.disabled = false;
 sendBtn.disabled = false;
@@ -136,8 +135,7 @@ currentUser = user;
 const userRef = doc(db, "users", currentUser.uid);
 const userSnap = await getDoc(userRef);
 if(userSnap.exists()){
-// Пользователь уже зарегистрирован
-nickInput.value = userSnap.data().nick;
+currentNick = userSnap.data().nick;
 overlay.style.display="none";
 messageInput.disabled = false;
 sendBtn.disabled = false;
