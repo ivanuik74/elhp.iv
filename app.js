@@ -1,8 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, getDocs, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, getDoc, doc, getDocs, where, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ===== CONFIG =====
+// ===== INIT =====
 const firebaseConfig = {
 apiKey: "AIzaSyA8YZF-7X2i2oJEMfuSVGH-2SnpbEFj6o4",
 authDomain: "elhp-iv-7be7e.firebaseapp.com",
@@ -12,7 +12,6 @@ messagingSenderId: "393716398102",
 appId: "1:393716398102:web:6912b00e9bcf7618af5d37"
 };
 
-// ===== INIT =====
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -45,8 +44,8 @@ function addMessage(msg){
 messagesDiv.innerHTML += createMessageHTML(
 msg.text,
 msg.time || msg.createdAt,
-msg.user === localStorage.getItem("username"),
-msg.user
+msg.uid === currentUser?.uid,
+msg.nick
 );
 scrollToBottom();
 }
@@ -67,21 +66,18 @@ addMessage(data);
 // ===== SEND MESSAGE =====
 function sendMessage(){
 const text = messageInput.value.trim();
-if(!text) return;
-const username = localStorage.getItem("username");
-if(!username) return;
+if(!text || !currentUser) return;
 
-addMessage({text, user:username, time:new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})});
+addMessage({text, nick: nickInput.value, uid: currentUser.uid, time:new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})});
 
-if(currentUser){
 const messagesRef = collection(db, "messages");
 addDoc(messagesRef,{
 text,
-user:username,
-uid:currentUser.uid,
+uid: currentUser.uid,
+nick: nickInput.value,
 createdAt: new Date()
 });
-}
+
 messageInput.value="";
 }
 
@@ -92,37 +88,36 @@ if(e.key==="Enter") sendMessage();
 
 // ===== REGISTRATION =====
 async function registerNick(){
-const nick = nickInput.value.trim();
 registerError.textContent = "";
+const nick = nickInput.value.trim();
+if(!nick){ registerError.textContent="Введите ник"; return; }
+if(!/^[a-zA-Z0-9]+$/.test(nick)){ registerError.textContent="Только английские буквы и цифры"; return; }
 
-if(!nick){
-registerError.textContent="Введите ник";
+// Анонимная регистрация
+signInAnonymously(auth).then(async userCredential=>{
+currentUser = userCredential.user;
+
+const userRef = doc(db, "users", currentUser.uid);
+const userSnap = await getDoc(userRef);
+
+if(userSnap.exists()){
+registerError.textContent="Вы уже зарегистрированы под другим ником";
 return;
 }
-if(!/^[a-zA-Z0-9]+$/.test(nick)){
-registerError.textContent="Только английские буквы и цифры";
-return;
-}
 
+// Проверка уникальности ника
 const usersRef = collection(db, "users");
 const q = query(usersRef, where("nick","==",nick));
 const snapshot = await getDocs(q);
+if(!snapshot.empty){ registerError.textContent="Этот ник уже занят"; return; }
 
-if(!snapshot.empty){
-registerError.textContent="Этот ник уже занят";
-return;
-}
-
-// Сохраняем ник
-localStorage.setItem("username", nick);
-
-// Анонимная регистрация
-signInAnonymously(auth).then(userCredential=>{
-currentUser = userCredential.user;
+// Создание пользователя
+await setDoc(userRef,{nick, createdAt:new Date()});
 overlay.style.display="none";
 messageInput.disabled = false;
 sendBtn.disabled = false;
 startRealtime();
+
 }).catch(err=>{
 registerError.textContent="Ошибка регистрации";
 console.error(err);
@@ -132,4 +127,21 @@ console.error(err);
 registerBtn.addEventListener("click", registerNick);
 nickInput.addEventListener("keydown", e=>{
 if(e.key==="Enter") registerNick();
+});
+
+// ===== AUTOLOGIN =====
+onAuthStateChanged(auth, async user=>{
+if(user){
+currentUser = user;
+const userRef = doc(db, "users", currentUser.uid);
+const userSnap = await getDoc(userRef);
+if(userSnap.exists()){
+// Пользователь уже зарегистрирован
+nickInput.value = userSnap.data().nick;
+overlay.style.display="none";
+messageInput.disabled = false;
+sendBtn.disabled = false;
+startRealtime();
+}
+}
 });
