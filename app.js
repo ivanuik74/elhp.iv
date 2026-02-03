@@ -82,7 +82,7 @@ messageInput.value="";
 }
 
 sendBtn.addEventListener("click", sendMessage);
-sendBtn.addEventListener("touchend", sendMessage); // мобильные
+sendBtn.addEventListener("touchend", sendMessage);
 messageInput.addEventListener("keydown", e=>{
 if(e.key==="Enter") sendMessage();
 });
@@ -103,7 +103,6 @@ return;
 }
 
 try{
-// Если пользователь уже есть в Auth, используем его
 if(!currentUser){
 const userCredential = await signInAnonymously(auth);
 currentUser = userCredential.user;
@@ -117,7 +116,6 @@ registerError.textContent="Вы уже зарегистрированы под �
 return;
 }
 
-// Проверка уникальности ника
 const usersRef = collection(db, "users");
 const q = query(usersRef, where("nick","==",nick));
 const snapshot = await getDocs(q);
@@ -126,7 +124,6 @@ registerError.textContent="Этот ник уже занят";
 return;
 }
 
-// Создание пользователя
 await setDoc(userRef,{nick, createdAt: serverTimestamp()});
 currentNick = nick;
 overlay.style.display="none";
@@ -151,7 +148,6 @@ if(user){
 const userRef = doc(db, "users", user.uid);
 const userSnap = await getDoc(userRef);
 if(!userSnap.exists()){
-// UID удалён из базы → выход
 await auth.signOut();
 currentUser = null;
 currentNick = "";
