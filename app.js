@@ -2,7 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, getDocs, where, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ===== INIT =====
+// ===== INIT FIREBASE =====
 const firebaseConfig = {
 apiKey: "AIzaSyA8YZF-7X2i2oJEMfuSVGH-2SnpbEFj6o4",
 authDomain: "elhp-iv-7be7e.firebaseapp.com",
@@ -29,8 +29,10 @@ const messagesDiv = document.getElementById("messages");
 let currentUser = null;
 let currentNick = "";
 
-// ===== CHAT =====
-function scrollToBottom(){ setTimeout(()=> messagesDiv.scrollTop = messagesDiv.scrollHeight, 50); }
+// ===== UTILS =====
+function scrollToBottom(){
+setTimeout(()=> messagesDiv.scrollTop = messagesDiv.scrollHeight, 50);
+}
 
 function createMessageHTML(text,time,isMine,user){
 return `
@@ -51,6 +53,7 @@ msg.nick
 scrollToBottom();
 }
 
+// ===== REALTIME MESSAGES =====
 function startRealtime(){
 const messagesRef = collection(db, "messages");
 const q = query(messagesRef, orderBy("createdAt"));
@@ -79,7 +82,7 @@ messageInput.value="";
 }
 
 sendBtn.addEventListener("click", sendMessage);
-sendBtn.addEventListener("touchend", sendMessage); // для мобильных
+sendBtn.addEventListener("touchend", sendMessage); // мобильные
 messageInput.addEventListener("keydown", e=>{
 if(e.key==="Enter") sendMessage();
 });
@@ -88,11 +91,23 @@ if(e.key==="Enter") sendMessage();
 async function registerNick(){
 registerError.textContent = "";
 const nick = nickInput.value.trim();
-if(!nick){ registerError.textContent="Введите ник"; return; }
-if(!/^[a-zA-Z0-9]+$/.test(nick)){ registerError.textContent="Только английские буквы и цифры"; return; }
 
-signInAnonymously(auth).then(async userCredential=>{
+if(!nick){
+registerError.textContent="Введите ник";
+return;
+}
+
+if(!/^[a-zA-Z0-9]+$/.test(nick)){
+registerError.textContent="Только английские буквы и цифры";
+return;
+}
+
+try{
+// Если пользователь уже есть в Auth, используем его
+if(!currentUser){
+const userCredential = await signInAnonymously(auth);
 currentUser = userCredential.user;
+}
 
 const userRef = doc(db, "users", currentUser.uid);
 const userSnap = await getDoc(userRef);
@@ -106,7 +121,10 @@ return;
 const usersRef = collection(db, "users");
 const q = query(usersRef, where("nick","==",nick));
 const snapshot = await getDocs(q);
-if(!snapshot.empty){ registerError.textContent="Этот ник уже занят"; return; }
+if(!snapshot.empty){
+registerError.textContent="Этот ник уже занят";
+return;
+}
 
 // Создание пользователя
 await setDoc(userRef,{nick, createdAt: serverTimestamp()});
@@ -116,10 +134,10 @@ messageInput.disabled = false;
 sendBtn.disabled = false;
 startRealtime();
 
-}).catch(err=>{
-registerError.textContent="Ошибка регистрации";
-console.error(err);
-});
+} catch(err){
+console.error("Регистрация:", err);
+registerError.textContent="Ошибка регистрации: попробуйте ещё раз";
+}
 }
 
 registerBtn.addEventListener("click", registerNick);
@@ -133,7 +151,8 @@ if(user){
 const userRef = doc(db, "users", user.uid);
 const userSnap = await getDoc(userRef);
 if(!userSnap.exists()){
-await auth.signOut(); // сбросить старый UID
+// UID удалён из базы → выход
+await auth.signOut();
 currentUser = null;
 currentNick = "";
 overlay.style.display = "flex";
@@ -147,5 +166,9 @@ messageInput.disabled = false;
 sendBtn.disabled = false;
 startRealtime();
 }
+} else {
+overlay.style.display = "flex";
+messageInput.disabled = true;
+sendBtn.disabled = true;
 }
 });
