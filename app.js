@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, getDoc, doc, getDocs, where, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, getDocs, where, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ===== INIT =====
 const firebaseConfig = {
@@ -57,8 +57,7 @@ const q = query(messagesRef, orderBy("createdAt"));
 onSnapshot(q, snapshot=>{
 messagesDiv.innerHTML="";
 snapshot.forEach(doc=>{
-const data = doc.data();
-addMessage(data);
+addMessage(doc.data());
 });
 });
 }
@@ -66,7 +65,7 @@ addMessage(data);
 // ===== SEND MESSAGE =====
 async function sendMessage(){
 const text = messageInput.value.trim();
-if(!text || !currentUser) return;
+if(!text || !currentUser || !currentNick) return;
 
 const messagesRef = collection(db, "messages");
 await addDoc(messagesRef,{
@@ -80,6 +79,7 @@ messageInput.value="";
 }
 
 sendBtn.addEventListener("click", sendMessage);
+sendBtn.addEventListener("touchend", sendMessage); // для мобильных
 messageInput.addEventListener("keydown", e=>{
 if(e.key==="Enter") sendMessage();
 });
@@ -91,7 +91,6 @@ const nick = nickInput.value.trim();
 if(!nick){ registerError.textContent="Введите ник"; return; }
 if(!/^[a-zA-Z0-9]+$/.test(nick)){ registerError.textContent="Только английские буквы и цифры"; return; }
 
-// Анонимная регистрация
 signInAnonymously(auth).then(async userCredential=>{
 currentUser = userCredential.user;
 
@@ -131,12 +130,19 @@ if(e.key==="Enter") registerNick();
 // ===== AUTOLOGIN =====
 onAuthStateChanged(auth, async user=>{
 if(user){
-currentUser = user;
-const userRef = doc(db, "users", currentUser.uid);
+const userRef = doc(db, "users", user.uid);
 const userSnap = await getDoc(userRef);
-if(userSnap.exists()){
+if(!userSnap.exists()){
+await auth.signOut(); // сбросить старый UID
+currentUser = null;
+currentNick = "";
+overlay.style.display = "flex";
+messageInput.disabled = true;
+sendBtn.disabled = true;
+} else {
+currentUser = user;
 currentNick = userSnap.data().nick;
-overlay.style.display="none";
+overlay.style.display = "none";
 messageInput.disabled = false;
 sendBtn.disabled = false;
 startRealtime();
