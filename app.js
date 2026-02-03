@@ -128,9 +128,7 @@ input.value="";
 
 // ===== ENTER и кнопка =====
 document.getElementById("messageInput").addEventListener("keydown", e=>{
-if(e.key === "Enter"){
-sendMessage();
-}
+if(e.key === "Enter") sendMessage();
 });
 document.getElementById("sendBtn").addEventListener("click", sendMessage);
 
