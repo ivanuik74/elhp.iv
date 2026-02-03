@@ -1,4 +1,3 @@
-// ===== FIREBASE =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, getDocs, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -28,10 +27,25 @@ const messageInput = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
 const messagesDiv = document.getElementById("messages");
 
-// ===== ФУНКЦИИ ЧАТА =====
-function scrollToBottom(){
-setTimeout(()=> messagesDiv.scrollTop = messagesDiv.scrollHeight, 50);
+// ===== AUTH =====
+let currentUser = null;
+signInAnonymously(auth);
+
+onAuthStateChanged(auth, (user)=>{
+if(user){
+currentUser = user;
+console.log("Auth OK", user.uid);
+// Если ник уже есть, показываем чат
+const savedNick = localStorage.getItem("username");
+if(savedNick){
+overlay.style.display="none";
+startRealtime();
 }
+}
+});
+
+// ===== CHAT =====
+function scrollToBottom(){ setTimeout(()=> messagesDiv.scrollTop = messagesDiv.scrollHeight, 50); }
 
 function createMessageHTML(text,time,isMine,user){
 return `
@@ -39,8 +53,7 @@ return `
 <div class="msgUser">${user}</div>
 <div class="msgText">${text}</div>
 <div class="msgTime">${time}</div>
-</div>
-`;
+</div>`;
 }
 
 function addMessage(msg){
@@ -53,26 +66,9 @@ msg.user
 scrollToBottom();
 }
 
-// ===== AUTH =====
-let currentUser = null;
-signInAnonymously(auth);
-onAuthStateChanged(auth, (user)=>{
-if(user){
-currentUser = user;
-console.log("Auth OK", user.uid);
-// Если ник уже есть, показываем чат
-if(localStorage.getItem("username")){
-overlay.style.display="none";
-startRealtime();
-}
-}
-});
-
-// ===== REALTIME CHAT =====
 function startRealtime(){
 const messagesRef = collection(db, "messages");
 const q = query(messagesRef, orderBy("createdAt"));
-
 onSnapshot(q, snapshot=>{
 messagesDiv.innerHTML="";
 snapshot.forEach(doc=>{
@@ -83,18 +79,15 @@ addMessage(data);
 });
 }
 
-// ===== ОТПРАВКА СООБЩЕНИЯ =====
+// ===== SEND MESSAGE =====
 function sendMessage(){
 const text = messageInput.value.trim();
 if(!text) return;
-
 const username = localStorage.getItem("username");
 if(!username) return;
 
-// Локально
 addMessage({text, user:username, time:new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})});
 
-// Firebase
 if(currentUser){
 const messagesRef = collection(db, "messages");
 addDoc(messagesRef,{
@@ -104,7 +97,6 @@ uid:currentUser.uid,
 createdAt: new Date()
 });
 }
-
 messageInput.value="";
 }
 
@@ -113,7 +105,7 @@ messageInput.addEventListener("keydown", e=>{
 if(e.key==="Enter") sendMessage();
 });
 
-// ===== РЕГИСТРАЦИЯ НИКА =====
+// ===== REGISTRATION =====
 async function registerNick(){
 const nick = nickInput.value.trim();
 if(!nick){
