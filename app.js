@@ -1,7 +1,7 @@
 // ===== FIREBASE =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, getDocs, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ===== CONFIG =====
 const firebaseConfig = {
@@ -18,37 +18,21 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ===== USERNAME =====
-let username = localStorage.getItem("username");
-function generateUsername(){
-const letters = "abcdefghijklmnopqrstuvwxyz";
-let name = "";
-for(let i=0;i<6;i++){
-name += letters[Math.floor(Math.random()*letters.length)];
-}
-return name;
-}
-if(!username){
-username = generateUsername();
-localStorage.setItem("username", username);
-}
+// ===== DOM =====
+const overlay = document.getElementById("registerOverlay");
+const nickInput = document.getElementById("nickInput");
+const registerBtn = document.getElementById("registerBtn");
+const registerError = document.getElementById("registerError");
 
-// ===== ВРЕМЯ =====
-function getTime(){
-const d = new Date();
-return d.getHours().toString().padStart(2,'0') + ":" +
-d.getMinutes().toString().padStart(2,'0');
-}
+const messageInput = document.getElementById("messageInput");
+const sendBtn = document.getElementById("sendBtn");
+const messagesDiv = document.getElementById("messages");
 
-// ===== СКРОЛЛ =====
+// ===== ФУНКЦИИ ЧАТА =====
 function scrollToBottom(){
-const chat = document.getElementById("messages");
-setTimeout(()=>{
-chat.scrollTop = chat.scrollHeight;
-},50);
+setTimeout(()=> messagesDiv.scrollTop = messagesDiv.scrollHeight, 50);
 }
 
-// ===== СОЗДАНИЕ HTML =====
 function createMessageHTML(text,time,isMine,user){
 return `
 <div class="message ${isMine ? "mine" : ""}">
@@ -59,27 +43,28 @@ return `
 `;
 }
 
-// ===== ДОБАВИТЬ СООБЩЕНИЕ =====
 function addMessage(msg){
-const chat = document.getElementById("messages");
-chat.innerHTML += createMessageHTML(
+messagesDiv.innerHTML += createMessageHTML(
 msg.text,
 msg.time || msg.createdAt,
-msg.user === username,
+msg.user === localStorage.getItem("username"),
 msg.user
 );
 scrollToBottom();
 }
 
-// ===== AUTH и FIRESTORE =====
+// ===== AUTH =====
 let currentUser = null;
 signInAnonymously(auth);
-
 onAuthStateChanged(auth, (user)=>{
 if(user){
 currentUser = user;
 console.log("Auth OK", user.uid);
+// Если ник уже есть, показываем чат
+if(localStorage.getItem("username")){
+overlay.style.display="none";
 startRealtime();
+}
 }
 });
 
@@ -89,8 +74,7 @@ const messagesRef = collection(db, "messages");
 const q = query(messagesRef, orderBy("createdAt"));
 
 onSnapshot(q, snapshot=>{
-const chat = document.getElementById("messages");
-chat.innerHTML = "";
+messagesDiv.innerHTML="";
 snapshot.forEach(doc=>{
 const data = doc.data();
 data.createdAt = data.createdAt ? new Date(data.createdAt.seconds*1000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : "";
@@ -101,43 +85,73 @@ addMessage(data);
 
 // ===== ОТПРАВКА СООБЩЕНИЯ =====
 function sendMessage(){
-const input = document.getElementById("messageInput");
-const text = input.value.trim();
+const text = messageInput.value.trim();
 if(!text) return;
 
-// локально
-const msgLocal = { text, time:getTime(), user:username };
-let messages = JSON.parse(localStorage.getItem("messages") || "[]");
-messages.push(msgLocal);
-localStorage.setItem("messages", JSON.stringify(messages));
-addMessage(msgLocal);
+const username = localStorage.getItem("username");
+if(!username) return;
+
+// Локально
+addMessage({text, user:username, time:new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})});
 
 // Firebase
 if(currentUser){
 const messagesRef = collection(db, "messages");
-addDoc(messagesRef, {
+addDoc(messagesRef,{
 text,
 user:username,
 uid:currentUser.uid,
-createdAt:serverTimestamp()
+createdAt: new Date()
 });
 }
 
-input.value="";
+messageInput.value="";
 }
 
-// ===== ENTER и кнопка =====
-document.getElementById("messageInput").addEventListener("keydown", e=>{
-if(e.key === "Enter") sendMessage();
+sendBtn.addEventListener("click", sendMessage);
+messageInput.addEventListener("keydown", e=>{
+if(e.key==="Enter") sendMessage();
 });
-document.getElementById("sendBtn").addEventListener("click", sendMessage);
 
-// ===== LOAD LOCAL HISTORY =====
+// ===== РЕГИСТРАЦИЯ НИКА =====
+async function registerNick(){
+const nick = nickInput.value.trim();
+if(!nick){
+registerError.textContent="Введите ник";
+return;
+}
+if(!/^[a-zA-Z0-9]+$/.test(nick)){
+registerError.textContent="Только английские буквы и цифры";
+return;
+}
+
+// Проверка уникальности
+const usersRef = collection(db, "users");
+const q = query(usersRef, where("nick","==",nick));
+const snapshot = await getDocs(q);
+
+if(!snapshot.empty){
+registerError.textContent="Этот ник уже занят";
+return;
+}
+
+// Сохраняем ник
+localStorage.setItem("username", nick);
+addDoc(usersRef,{nick});
+overlay.style.display="none";
+
+startRealtime();
+}
+
+registerBtn.addEventListener("click", registerNick);
+nickInput.addEventListener("keydown", e=>{
+if(e.key==="Enter") registerNick();
+});
+
+// ===== LOCAL HISTORY =====
 function loadMessages(){
-let messages = JSON.parse(localStorage.getItem("messages") || "[]");
-messages.forEach(msg=>{
-addMessage(msg);
-});
+let messages = JSON.parse(localStorage.getItem("messages")||"[]");
+messages.forEach(msg=> addMessage(msg));
 scrollToBottom();
 }
 loadMessages();
