@@ -111,10 +111,6 @@ font-size:18px;
 cursor:pointer;
 }
 
-.inputBar button:active{
-transform: scale(0.95);
-}
-
 #registerOverlay{
 position:fixed;
 top:0;
@@ -184,8 +180,8 @@ width:90%;
 <div id="messages" class="messages"></div>
 
 <div class="inputBar">
-<input id="messageInput" placeholder="Написать...">
-<button id="sendBtn">➤</button>
+<input id="messageInput" placeholder="Написать..." disabled>
+<button id="sendBtn" disabled>➤</button>
 </div>
 
 <!-- Регистрация -->
