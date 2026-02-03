@@ -122,15 +122,62 @@ cursor:pointer;
 transform: scale(0.95);
 }
 
-@media (max-width: 500px){
-.inputBar input{
-font-size:13px;
-padding:10px;
+/* ФОРМА РЕГИСТРАЦИИ */
+#registerOverlay{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.95);
+display:flex;
+justify-content:center;
+align-items:center;
+z-index:999;
 }
-.inputBar button{
-width:40px;
-height:40px;
-font-size:16px;
+
+#registerBox{
+background:#111;
+padding:25px 20px;
+border-radius:15px;
+display:flex;
+flex-direction:column;
+align-items:center;
+min-width:250px;
+}
+
+#registerBox input{
+padding:10px 12px;
+border-radius:8px;
+border:none;
+outline:none;
+background:#1c1c1c;
+color:white;
+width:100%;
+margin-bottom:12px;
+font-size:14px;
+}
+
+#registerBox button{
+padding:8px 15px;
+border:none;
+border-radius:8px;
+background:#fff;
+color:#000;
+cursor:pointer;
+font-weight:bold;
+font-size:14px;
+}
+
+#registerBox .error{
+color:#f55;
+font-size:12px;
+margin-top:5px;
+}
+
+@media(max-width:500px){
+#registerBox{
+width:90%;
 }
 }
 </style>
@@ -147,6 +194,15 @@ font-size:16px;
 <div class="inputBar">
 <input id="messageInput" placeholder="Написать...">
 <button id="sendBtn">➤</button>
+</div>
+
+<!-- Регистрация -->
+<div id="registerOverlay">
+<div id="registerBox">
+<input id="nickInput" placeholder="Придумай ник (только английский)">
+<button id="registerBtn">Зарегистрироваться</button>
+<div class="error" id="registerError"></div>
+</div>
 </div>
 
 <script type="module" src="app.js"></script>
