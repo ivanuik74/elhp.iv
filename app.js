@@ -126,12 +126,13 @@ createdAt:serverTimestamp()
 input.value="";
 }
 
-// ===== ENTER =====
+// ===== ENTER и кнопка =====
 document.getElementById("messageInput").addEventListener("keydown", e=>{
 if(e.key === "Enter"){
 sendMessage();
 }
 });
+document.getElementById("sendBtn").addEventListener("click", sendMessage);
 
 // ===== LOAD LOCAL HISTORY =====
 function loadMessages(){
